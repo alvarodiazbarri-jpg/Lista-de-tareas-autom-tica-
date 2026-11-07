@@ -70,6 +70,17 @@
     <form method="dialog"><button class="primary-btn">Entendido</button></form>
   </dialog>
 
+  <dialog id="askDialog">
+    <form method="dialog" class="ask-form">
+      <h2 id="askTitle"></h2>
+      <input id="askInput" type="text" autocomplete="off">
+      <div class="ask-buttons">
+        <button value="cancel" class="ghost-btn" formnovalidate>Cancelar</button>
+        <button id="askOk" value="ok" class="primary-btn">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="js/parser.js"></script>
   <script src="js/app.js"></script>
 </body>

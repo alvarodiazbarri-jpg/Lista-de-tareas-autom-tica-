@@ -21,11 +21,19 @@
   };
 
   function defaultState() {
-    return {
+    const s = {
       lists: [INBOX_NAME, 'Tareas', 'Compra', 'Ideas'].map((name) => ({
         id: uid(), name, emoji: emojiFor(name), items: [],
       })),
     };
+    // En la demo publicada se muestran unos ejemplos para ver cómo queda
+    if (window.DILO_DEMO) {
+      const ex = { [INBOX_NAME]: ['Ejemplo: una app que traduzca a los perros'],
+        Tareas: ['Ejemplo: llamar al dentista'], Compra: ['Ejemplo: leche', 'Ejemplo: pan'] };
+      s.lists.forEach((l) => (ex[l.name] || []).forEach((t) =>
+        l.items.push({ id: uid(), text: t, done: false, createdAt: Date.now() })));
+    }
+    return s;
   }
 
   function load() {
@@ -181,7 +189,7 @@
 
   async function startAudioRecording() {
     if (!navigator.mediaDevices || !window.MediaRecorder) {
-      toast('Este navegador no permite grabar. Escríbelo abajo.');
+      toast('Aquí no se puede usar el micrófono. Escríbelo abajo.');
       $('textInput').focus();
       return;
     }
@@ -211,7 +219,8 @@
       setRecording(true, '🎙️ Grabando audio (sin reconocimiento)… pulsa para terminar');
     } catch (e) {
       setRecording(false);
-      toast('Permite el acceso al micrófono para grabar');
+      toast('No hay acceso al micrófono. Permítelo o escríbelo abajo.');
+      $('textInput').focus();
     }
   }
 
@@ -246,6 +255,33 @@
     }
     input.value = '';
   });
+
+  // ---------- Diálogo propio (sustituye a prompt/confirm) ----------
+  // ask(titulo, valor) -> texto o null; ask(titulo, null, 'Botón') -> true/false
+  function ask(title, value, okLabel = 'Guardar') {
+    const dlg = $('askDialog');
+    const input = $('askInput');
+    const isConfirm = value === null;
+    $('askTitle').textContent = title;
+    $('askOk').textContent = okLabel;
+    $('askOk').classList.toggle('danger-btn', isConfirm);
+    input.hidden = isConfirm;
+    input.value = value || '';
+    return new Promise((resolve) => {
+      const done = (ok) => {
+        dlg.removeEventListener('close', onClose);
+        if (dlg.open) dlg.close();
+        if (isConfirm) resolve(ok);
+        else resolve(ok && input.value.trim() ? input.value.trim() : null);
+      };
+      const onClose = () => done(dlg.returnValue === 'ok');
+      dlg.returnValue = '';
+      dlg.addEventListener('close', onClose);
+      input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); dlg.close('ok'); } };
+      dlg.showModal();
+      if (!isConfirm) { input.focus(); input.select(); }
+    });
+  }
 
   // ---------- Toast con deshacer ----------
   let toastTimer;
@@ -349,10 +385,10 @@
       n.value = '__new';
       n.textContent = '+ Nueva lista…';
       sel.appendChild(n);
-      sel.addEventListener('change', () => {
+      sel.addEventListener('change', async () => {
         let target = null;
         if (sel.value === '__new') {
-          const name = prompt('Nombre de la nueva lista');
+          const name = await ask('Nombre de la nueva lista');
           if (name && name.trim()) target = ensureList(name.trim());
         } else if (sel.value) {
           target = getList(sel.value);
@@ -368,8 +404,8 @@
       const edit = document.createElement('button');
       edit.textContent = '✏️';
       edit.setAttribute('aria-label', 'Editar');
-      edit.addEventListener('click', () => {
-        const t = prompt('Editar', item.text);
+      edit.addEventListener('click', async () => {
+        const t = await ask('Editar', item.text);
         if (t && t.trim()) { item.text = t.trim(); save(); render(); }
       });
 
@@ -393,8 +429,8 @@
   $('backBtn').addEventListener('click', () => { currentListId = null; render(); });
   $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
 
-  $('newListBtn').addEventListener('click', () => {
-    const name = prompt('Nombre de la nueva lista');
+  $('newListBtn').addEventListener('click', async () => {
+    const name = await ask('Nombre de la nueva lista');
     if (!name || !name.trim()) return;
     snapshot();
     const list = ensureList(name.trim());
@@ -412,18 +448,18 @@
     toast('Completadas borradas', true);
   });
 
-  $('renameListBtn').addEventListener('click', () => {
+  $('renameListBtn').addEventListener('click', async () => {
     const list = getList(currentListId);
-    const name = prompt('Nuevo nombre', list.name);
+    const name = await ask('Nuevo nombre', list.name);
     if (!name || !name.trim()) return;
     list.name = name.trim();
     list.emoji = emojiFor(list.name);
     save(); render();
   });
 
-  $('deleteListBtn').addEventListener('click', () => {
+  $('deleteListBtn').addEventListener('click', async () => {
     const list = getList(currentListId);
-    if (!list || !confirm(`¿Eliminar la lista «${list.name}»?`)) return;
+    if (!list || !(await ask(`¿Eliminar la lista «${list.name}» y todo su contenido?`, null, 'Eliminar'))) return;
     snapshot();
     state.lists = state.lists.filter((l) => l.id !== list.id);
     currentListId = null;
