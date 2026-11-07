@@ -1,5 +1,5 @@
 // Service worker: permite abrir la app sin conexión.
-const CACHE = 'dilo-v2';
+const CACHE = 'dilo-v3';
 const ASSETS = [
   './',
   'index.html',
@@ -27,10 +27,14 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
     fetch(e.request)
-      .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy));
-        return res;
+      .then(async (res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+          return res;
+        }
+        // Si la web da error (por ejemplo 404 mientras se publica), usamos la copia guardada
+        return (await caches.match(e.request, { ignoreSearch: true })) || res;
       })
       .catch(() => caches.match(e.request, { ignoreSearch: true }))
   );
