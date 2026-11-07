@@ -1,0 +1,17 @@
+{
+  "name": "Dilo · Listas por voz",
+  "short_name": "Dilo",
+  "description": "Apunta tareas, compras e ideas con la voz en cuanto se te ocurran.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f6fb",
+  "theme_color": "#4f46e5",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Hablar ahora", "short_name": "Hablar", "url": "./?voz" }
+  ]
+}
