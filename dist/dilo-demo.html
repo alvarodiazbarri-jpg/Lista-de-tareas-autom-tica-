@@ -1,0 +1,875 @@
+<title>Dilo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root {
+  --bg: #f6f6fb;
+  --card: #ffffff;
+  --text: #1c1b29;
+  --muted: #6b6a7d;
+  --line: #e4e3ef;
+  --accent: #4f46e5;
+  --accent-soft: #eceafd;
+  --on-accent: #ffffff;
+  --danger: #dc2626;
+  --rec: #ef4444;
+  --toast-bg: #1c1b29;
+  --toast-fg: #ffffff;
+  --toast-link: #a5a1ff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121219; --card: #1c1c26; --text: #ececf4; --muted: #9a99ad; --line: #2c2b3a;
+    --accent: #8b85ff; --accent-soft: #26244a; --on-accent: #12112a; --danger: #f87171;
+    --toast-bg: #ececf4; --toast-fg: #1c1b29; --toast-link: #4f46e5;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121219; --card: #1c1c26; --text: #ececf4; --muted: #9a99ad; --line: #2c2b3a;
+  --accent: #8b85ff; --accent-soft: #26244a; --on-accent: #12112a; --danger: #f87171;
+  --toast-bg: #ececf4; --toast-fg: #1c1b29; --toast-link: #4f46e5;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  padding-bottom: 150px;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+
+.topbar {
+  position: sticky; z-index: 5;
+  display: flex; align-items: center; gap: 8px;
+  top: env(safe-area-inset-top, 0px);
+  padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.topbar h1 { flex: 1; margin: 0; font-size: 1.3rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.icon-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--card); font-size: 1.1rem;
+}
+
+main {
+  max-width: 640px; margin: 0 auto;
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+.lists { display: grid; gap: 10px; }
+.list-card {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; text-align: left;
+  padding: 14px 16px; border-radius: 14px;
+  border: 1px solid var(--line); background: var(--card);
+}
+.list-card .emoji { font-size: 1.4rem; }
+.list-card .name { flex: 1; font-weight: 600; }
+.list-card .count {
+  min-width: 28px; padding: 2px 8px; border-radius: 99px; text-align: center;
+  background: var(--accent-soft); color: var(--accent); font-size: .85rem; font-weight: 600;
+}
+.list-card.inbox { border-color: var(--accent); }
+.list-card.inbox .count.has { background: var(--accent); color: var(--on-accent); }
+
+.ghost-btn {
+  margin-top: 12px; padding: 10px 14px; border-radius: 10px;
+  border: 1px dashed var(--line); background: transparent; color: var(--muted);
+}
+.ghost-btn.danger { color: var(--danger); }
+.primary-btn {
+  padding: 10px 18px; border-radius: 10px; border: 0;
+  background: var(--accent); color: var(--on-accent); font-weight: 600;
+}
+
+.items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; border-radius: 12px;
+  background: var(--card); border: 1px solid var(--line);
+}
+.item input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
+.item .text { flex: 1; word-break: break-word; }
+.item.done .text { text-decoration: line-through; color: var(--muted); }
+.item .date { display: block; font-size: .75rem; color: var(--muted); }
+.item audio { width: 100%; max-width: 260px; height: 36px; }
+.item .actions { display: flex; gap: 4px; flex: none; }
+.item .actions button, .item select {
+  border: 1px solid var(--line); background: transparent; border-radius: 8px;
+  padding: 6px 8px; font-size: .85rem; color: var(--muted);
+}
+.item select { width: 44px; padding: 6px 4px; text-align: center; }
+.empty { text-align: center; color: var(--muted); margin: 40px 0; }
+.list-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 14px) max(16px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(transparent, var(--bg) 30%);
+}
+.live {
+  max-width: 640px; margin: 0 auto 8px; min-height: 1.4em;
+  text-align: center; color: var(--muted); font-style: italic;
+}
+.text-form { max-width: 640px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
+.text-form input {
+  flex: 1; min-width: 0; padding: 14px 16px; border-radius: 99px;
+  border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 1rem;
+}
+.mic {
+  flex: none; width: 68px; height: 68px; border-radius: 50%; border: 0;
+  background: var(--accent); box-shadow: 0 6px 20px rgb(79 70 229 / .35);
+  display: grid; place-items: center;
+}
+.mic svg { width: 32px; height: 32px; fill: var(--on-accent); }
+.mic.recording { background: var(--rec); animation: pulse 1.2s infinite; }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgb(239 68 68 / .55); }
+  100% { box-shadow: 0 0 0 22px rgb(239 68 68 / 0); }
+}
+
+.toast {
+  position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 20;
+  display: flex; gap: 12px; align-items: center;
+  max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 12px;
+  background: var(--toast-bg); color: var(--toast-fg); box-shadow: 0 8px 30px rgb(0 0 0 / .25);
+}
+.toast-undo { border: 0; background: transparent; color: var(--toast-link); font-weight: 700; }
+
+dialog {
+  max-width: min(520px, calc(100% - 32px)); border: 0; border-radius: 16px;
+  background: var(--card); color: var(--text);
+}
+dialog::backdrop { background: rgb(0 0 0 / .4); }
+dialog li { margin-bottom: 6px; }
+
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; z-index: 10;
+  height: env(safe-area-inset-top, 0px); background: var(--bg);
+}
+.ask-form { display: grid; gap: 14px; min-width: min(360px, 80vw); }
+.ask-form h2 { margin: 0; font-size: 1.1rem; text-wrap: balance; }
+.ask-form input {
+  padding: 12px 14px; border-radius: 10px; font-size: 1rem;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text);
+}
+.ask-buttons { display: flex; justify-content: flex-end; gap: 8px; }
+.ask-buttons .ghost-btn { margin: 0; }
+.primary-btn.danger-btn { background: var(--danger); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .mic.recording { animation: none; } }
+</style>
+
+  <header class="topbar">
+    <button id="backBtn" class="icon-btn" hidden aria-label="Volver">←</button>
+    <h1 id="title">Dilo</h1>
+    <button id="helpBtn" class="icon-btn" aria-label="Ayuda">?</button>
+  </header>
+
+  <main id="main">
+    <!-- Vista: todas las listas -->
+    <section id="homeView">
+      <div id="lists" class="lists"></div>
+      <button id="newListBtn" class="ghost-btn">+ Nueva lista</button>
+    </section>
+
+    <!-- Vista: una lista -->
+    <section id="listView" hidden>
+      <ul id="items" class="items"></ul>
+      <p id="emptyMsg" class="empty" hidden>Lista vacía. Pulsa el micrófono y dilo.</p>
+      <div class="list-actions">
+        <button id="clearDoneBtn" class="ghost-btn">Borrar completadas</button>
+        <button id="renameListBtn" class="ghost-btn">Renombrar</button>
+        <button id="deleteListBtn" class="ghost-btn danger">Eliminar lista</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Barra inferior: voz + texto -->
+  <footer class="dock">
+    <div id="live" class="live" aria-live="polite"></div>
+    <form id="textForm" class="text-form" autocomplete="off">
+      <input id="textInput" type="text" placeholder="O escríbelo aquí…" enterkeyhint="send">
+      <button id="micBtn" type="button" class="mic" aria-label="Hablar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+      </button>
+    </form>
+  </footer>
+
+  <div id="toast" class="toast" hidden>
+    <span id="toastMsg"></span>
+    <button id="toastUndo" class="toast-undo">Deshacer</button>
+  </div>
+
+  <dialog id="helpDialog">
+    <h2>Cómo usar Dilo</h2>
+    <p>Pulsa el micrófono y di lo que se te ocurra. Ejemplos:</p>
+    <ul>
+      <li><b>«Añade leche, pan y huevos a la compra»</b></li>
+      <li><b>«Compra tomates»</b> — empieza con el nombre de la lista</li>
+      <li><b>«Apunta llamar al dentista en tareas»</b></li>
+      <li><b>«Crea una lista de regalos de Navidad»</b></li>
+      <li><b>«Añade una bici a la lista de regalos»</b> — si no existe, la crea</li>
+      <li><b>Cualquier otra cosa</b> se guarda en la <i>Bandeja de entrada</i> para organizarla luego.</li>
+    </ul>
+    <p>Si no hay conexión o el navegador no reconoce la voz, se graba el audio y lo encontrarás en la Bandeja de entrada.</p>
+    <form method="dialog"><button class="primary-btn">Entendido</button></form>
+  </dialog>
+
+  <dialog id="askDialog">
+    <form method="dialog" class="ask-form">
+      <h2 id="askTitle"></h2>
+      <input id="askInput" type="text" autocomplete="off">
+      <div class="ask-buttons">
+        <button value="cancel" class="ghost-btn" formnovalidate>Cancelar</button>
+        <button id="askOk" value="ok" class="primary-btn">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>window.DILO_DEMO = true;
+// Interpreta lo que dices y decide qué hacer con ello.
+// Devuelve { type: 'create' | 'add' | 'inbox', list?, items? }
+
+(function (global) {
+  const INBOX_NAME = 'Bandeja de entrada';
+
+  function normalize(str) {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[.!?¡¿;:]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Quita artículos y la palabra "lista" del principio: "la lista de la compra" -> "compra"
+  function cleanListName(str) {
+    return str
+      .replace(/^(?:(?:la|el|las|los|mi|mis)\s+)?(?:lista\s+(?:de\s+(?:la\s+|el\s+|las\s+|los\s+)?|llamada\s+)?)?/i, '')
+      .replace(/^(?:la|el|las|los)\s+/i, '')
+      .trim();
+  }
+
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function singular(n) {
+    if (n.endsWith('es') && n.length > 4) return n.slice(0, -2);
+    if (n.endsWith('s') && n.length > 3) return n.slice(0, -1);
+    return n;
+  }
+
+  // Busca una lista existente por nombre (tolera tildes, artículos y plurales)
+  function findList(lists, name) {
+    const target = normalize(cleanListName(name));
+    if (!target) return null;
+    const exact = lists.find((l) => normalize(cleanListName(l.name)) === target);
+    if (exact) return exact;
+    const t = singular(target);
+    return lists.find((l) => singular(normalize(cleanListName(l.name))) === t) || null;
+  }
+
+  // "pan, leche y huevos" -> ["pan", "leche", "huevos"]
+  function splitItems(str) {
+    return str
+      .split(/\s*,\s*|\s+y\s+(?=\S)/i)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map(capitalize);
+  }
+
+  const CREATE_RE = /^(?:crea|crear|creame|haz|hazme|abre|nueva|nuevo|empieza)\s+(?:una\s+)?(?:nueva\s+)?lista\s+(?:de\s+|llamada\s+|para\s+)?(.+)$/i;
+  const NEW_LIST_RE = /^(?:nueva|una nueva)\s+lista\s*(?:de\s+|llamada\s+|para\s+)?(.+)$/i;
+  const ADD_VERBS = '(?:anade|anadir|anademe|agrega|agregar|apunta|apuntame|apuntar|pon|ponme|poner|mete|meter|incluye|incluir|guarda|guardar|anota|anotar)';
+  const ADD_RE = new RegExp('^' + ADD_VERBS + '\\s+(.+)\\s+(?:a|en|al)\\s+(.+)$', 'i');
+  const ADD_NO_LIST_RE = new RegExp('^' + ADD_VERBS + '\\s+(.+)$', 'i');
+
+  function parse(rawText, lists) {
+    const original = rawText.trim().replace(/\s+/g, ' ');
+    const text = normalize(original);
+    if (!text) return null;
+
+    // Para devolver el texto con tildes originales usamos posiciones equivalentes:
+    // normalize() no cambia la longitud salvo signos de puntuación, así que
+    // recortamos sobre una versión sin puntuación del original.
+    const orig = original.replace(/[.!?¡¿;:]/g, '').replace(/\s+/g, ' ').trim();
+    const sliceOrig = (start, len) => orig.substr(start, len);
+
+    // 1) Crear lista
+    let m = text.match(CREATE_RE) || text.match(NEW_LIST_RE);
+    if (m) {
+      const start = text.lastIndexOf(m[1]);
+      const name = cleanListName(sliceOrig(start, m[1].length));
+      if (name) return { type: 'create', list: capitalize(name) };
+    }
+
+    // 2) Añadir X a/en LISTA
+    m = text.match(ADD_RE);
+    if (m) {
+      // Probamos todos los cortes posibles " a|en|al " empezando por el último
+      const verbMatch = text.match(new RegExp('^' + ADD_VERBS + '\\s+', 'i'));
+      const body = text.slice(verbMatch[0].length);
+      const bodyOrig = orig.slice(verbMatch[0].length);
+      const sepRe = /\s(?:a|en|al)\s/g;
+      const cuts = [];
+      let s;
+      while ((s = sepRe.exec(body))) {
+        cuts.push({ idx: s.index, len: s[0].length });
+        sepRe.lastIndex = s.index + 1;
+      }
+      for (let i = cuts.length - 1; i >= 0; i--) {
+        const c = cuts[i];
+        const itemPart = bodyOrig.slice(0, c.idx);
+        const listPart = bodyOrig.slice(c.idx + c.len);
+        const existing = findList(lists, listPart);
+        if (existing) {
+          return { type: 'add', list: existing.name, items: splitItems(itemPart) };
+        }
+      }
+      // Si dice explícitamente "lista", la creamos
+      for (let i = cuts.length - 1; i >= 0; i--) {
+        const c = cuts[i];
+        const listPartNorm = body.slice(c.idx + c.len);
+        if (/^(?:(?:la|mi)\s+)?lista\b/.test(listPartNorm)) {
+          const itemPart = bodyOrig.slice(0, c.idx);
+          const name = cleanListName(bodyOrig.slice(c.idx + c.len));
+          if (name) {
+            return { type: 'add', list: capitalize(name), items: splitItems(itemPart), created: true };
+          }
+        }
+      }
+    }
+
+    // 3) Empieza por el nombre de una lista: "compra: leche y pan" / "tareas llamar al médico"
+    const sortedLists = [...lists].sort((a, b) => b.name.length - a.name.length);
+    for (const l of sortedLists) {
+      const n = normalize(l.name);
+      const prefixes = [n, 'lista de ' + n, 'lista ' + n, 'en ' + n, 'para ' + n];
+      for (const p of prefixes) {
+        if (text.startsWith(p + ' ') && text.length > p.length + 1) {
+          const rest = orig.slice(p.length).replace(/^[\s,]+/, '');
+          if (rest) return { type: 'add', list: l.name, items: splitItems(rest) };
+        }
+      }
+    }
+
+    // 4) "apunta X" sin lista -> bandeja de entrada
+    m = text.match(ADD_NO_LIST_RE);
+    if (m) {
+      const verbLen = text.length - m[1].length;
+      return { type: 'inbox', list: INBOX_NAME, items: [capitalize(orig.slice(verbLen).trim())] };
+    }
+
+    // 5) Cualquier otra cosa: se guarda tal cual para organizarla luego
+    return { type: 'inbox', list: INBOX_NAME, items: [capitalize(orig)] };
+  }
+
+  const api = { parse, normalize, findList, splitItems, INBOX_NAME };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else global.VoiceParser = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+  <script>(function () {
+  'use strict';
+
+  const { parse, findList, INBOX_NAME } = window.VoiceParser;
+  const STORAGE_KEY = 'dilo.v1';
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- Datos ----------
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  const EMOJIS = {
+    'bandeja de entrada': '📥', tareas: '✅', compra: '🛒', compras: '🛒', ideas: '💡',
+    regalos: '🎁', viajes: '✈️', viaje: '✈️', libros: '📚', peliculas: '🎬', series: '📺',
+    trabajo: '💼', casa: '🏠', recetas: '🍳', musica: '🎵', deporte: '🏃', salud: '🩺',
+  };
+  const emojiFor = (name) => {
+    const n = window.VoiceParser.normalize(name);
+    if (EMOJIS[n]) return EMOJIS[n];
+    const key = Object.keys(EMOJIS).find((k) => n.startsWith(k));
+    return key ? EMOJIS[key] : '📝';
+  };
+
+  function defaultState() {
+    const s = {
+      lists: [INBOX_NAME, 'Tareas', 'Compra', 'Ideas'].map((name) => ({
+        id: uid(), name, emoji: emojiFor(name), items: [],
+      })),
+    };
+    // En la demo publicada se muestran unos ejemplos para ver cómo queda
+    if (window.DILO_DEMO) {
+      const ex = { [INBOX_NAME]: ['Ejemplo: una app que traduzca a los perros'],
+        Tareas: ['Ejemplo: llamar al dentista'], Compra: ['Ejemplo: leche', 'Ejemplo: pan'] };
+      s.lists.forEach((l) => (ex[l.name] || []).forEach((t) =>
+        l.items.push({ id: uid(), text: t, done: false, createdAt: Date.now() })));
+    }
+    return s;
+  }
+
+  function load() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (s && Array.isArray(s.lists)) {
+        if (!s.lists.some((l) => l.name === INBOX_NAME)) {
+          s.lists.unshift({ id: uid(), name: INBOX_NAME, emoji: '📥', items: [] });
+        }
+        return s;
+      }
+    } catch (e) { /* datos corruptos o almacenamiento bloqueado */ }
+    return defaultState();
+  }
+
+  let state = load();
+  let undoSnapshot = null;
+  let currentListId = null;
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch (e) { toast('⚠️ No se pudo guardar en este dispositivo'); }
+  }
+
+  function snapshot() { undoSnapshot = JSON.stringify(state); }
+
+  const inbox = () => state.lists.find((l) => l.name === INBOX_NAME);
+  const getList = (id) => state.lists.find((l) => l.id === id);
+
+  function ensureList(name) {
+    let list = findList(state.lists, name);
+    if (!list) {
+      list = { id: uid(), name, emoji: emojiFor(name), items: [] };
+      state.lists.push(list);
+    }
+    return list;
+  }
+
+  function addItems(list, texts, extra = {}) {
+    for (const text of [...texts].reverse()) {
+      list.items.unshift({ id: uid(), text, done: false, createdAt: Date.now(), ...extra });
+    }
+  }
+
+  // ---------- Audio (IndexedDB) ----------
+  const DB_NAME = 'dilo-audio';
+  function db() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('clips');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function putAudio(id, blob) {
+    const d = await db();
+    return new Promise((res, rej) => {
+      const tx = d.transaction('clips', 'readwrite');
+      tx.objectStore('clips').put(blob, id);
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+    });
+  }
+  async function getAudio(id) {
+    const d = await db();
+    return new Promise((res, rej) => {
+      const r = d.transaction('clips').objectStore('clips').get(id);
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  }
+  async function deleteAudio(id) {
+    try {
+      const d = await db();
+      d.transaction('clips', 'readwrite').objectStore('clips').delete(id);
+    } catch (e) { /* nada que borrar */ }
+  }
+
+  // ---------- Procesar lo dicho/escrito ----------
+  function handleInput(text) {
+    const result = parse(text, state.lists);
+    if (!result) return;
+    snapshot();
+
+    if (result.type === 'create') {
+      const exists = findList(state.lists, result.list);
+      const list = ensureList(result.list);
+      save(); render();
+      toast(exists ? `La lista «${list.name}» ya existía` : `Lista «${list.name}» creada`, true);
+      return;
+    }
+
+    const list = result.type === 'inbox' ? inbox() : ensureList(result.list);
+    addItems(list, result.items);
+    save(); render();
+    const what = result.items.length === 1 ? `«${result.items[0]}»` : `${result.items.length} elementos`;
+    toast(`${list.emoji} ${what} → ${list.name}${result.created ? ' (nueva)' : ''}`, true);
+  }
+
+  // ---------- Voz ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn = $('micBtn');
+  const live = $('live');
+  let recognition = null;
+  let listening = false;
+  let finalText = '';
+  let mediaRecorder = null;
+
+  function setRecording(on, msg = '') {
+    listening = on;
+    micBtn.classList.toggle('recording', on);
+    micBtn.setAttribute('aria-label', on ? 'Parar' : 'Hablar');
+    live.textContent = msg;
+  }
+
+  function startRecognition() {
+    recognition = new SR();
+    recognition.lang = 'es-ES';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    finalText = '';
+    let failedOver = false;
+
+    recognition.onresult = (e) => {
+      let interim = '';
+      finalText = '';
+      for (let i = 0; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finalText += r[0].transcript + ' ';
+        else interim += r[0].transcript;
+      }
+      live.textContent = (finalText + interim).trim() || 'Escuchando…';
+    };
+    recognition.onerror = (e) => {
+      if (e.error === 'network' || e.error === 'service-not-allowed' || e.error === 'language-not-supported') {
+        // Sin conexión o sin servicio: no perder la idea, grabamos audio
+        failedOver = true;
+        setRecording(false);
+        startAudioRecording();
+      } else if (e.error === 'not-allowed') {
+        setRecording(false);
+        toast('Permite el acceso al micrófono para usar la voz');
+      }
+    };
+    recognition.onend = () => {
+      if (failedOver) return;
+      setRecording(false);
+      const text = finalText.trim();
+      if (text) handleInput(text);
+      recognition = null;
+    };
+    recognition.start();
+    setRecording(true, 'Escuchando… pulsa otra vez para terminar');
+  }
+
+  async function startAudioRecording() {
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      toast('Aquí no se puede usar el micrófono. Escríbelo abajo.');
+      $('textInput').focus();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const chunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setRecording(false);
+        mediaRecorder = null;
+        if (!chunks.length) return;
+        const blob = new Blob(chunks, { type: chunks[0].type || 'audio/webm' });
+        const audioId = uid();
+        try {
+          await putAudio(audioId, blob);
+          snapshot();
+          addItems(inbox(), ['🎙️ Nota de voz'], { audioId });
+          save(); render();
+          toast('🎙️ Nota de voz guardada en la Bandeja de entrada');
+        } catch (e) {
+          toast('⚠️ No se pudo guardar el audio');
+        }
+      };
+      mediaRecorder.start();
+      setRecording(true, '🎙️ Grabando audio (sin reconocimiento)… pulsa para terminar');
+    } catch (e) {
+      setRecording(false);
+      toast('No hay acceso al micrófono. Permítelo o escríbelo abajo.');
+      $('textInput').focus();
+    }
+  }
+
+  micBtn.addEventListener('click', () => {
+    if (listening) {
+      if (recognition) recognition.stop();
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+      return;
+    }
+    if (SR && navigator.onLine) {
+      try { startRecognition(); return; } catch (e) { /* cae al modo audio */ }
+    }
+    startAudioRecording();
+  });
+
+  // ---------- Texto ----------
+  $('textForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = $('textInput');
+    const text = input.value.trim();
+    if (!text) return;
+    // Dentro de una lista (que no sea la bandeja), lo escrito va directo a esa lista
+    // salvo que sea un comando explícito.
+    const list = currentListId && getList(currentListId);
+    const parsed = parse(text, state.lists);
+    if (list && list.name !== INBOX_NAME && parsed.type === 'inbox') {
+      snapshot();
+      addItems(list, window.VoiceParser.splitItems(parsed.items[0]));
+      save(); render();
+    } else {
+      handleInput(text);
+    }
+    input.value = '';
+  });
+
+  // ---------- Diálogo propio (sustituye a prompt/confirm) ----------
+  // ask(titulo, valor) -> texto o null; ask(titulo, null, 'Botón') -> true/false
+  function ask(title, value, okLabel = 'Guardar') {
+    const dlg = $('askDialog');
+    const input = $('askInput');
+    const isConfirm = value === null;
+    $('askTitle').textContent = title;
+    $('askOk').textContent = okLabel;
+    $('askOk').classList.toggle('danger-btn', isConfirm);
+    input.hidden = isConfirm;
+    input.value = value || '';
+    return new Promise((resolve) => {
+      const done = (ok) => {
+        dlg.removeEventListener('close', onClose);
+        if (dlg.open) dlg.close();
+        if (isConfirm) resolve(ok);
+        else resolve(ok && input.value.trim() ? input.value.trim() : null);
+      };
+      const onClose = () => done(dlg.returnValue === 'ok');
+      dlg.returnValue = '';
+      dlg.addEventListener('close', onClose);
+      input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); dlg.close('ok'); } };
+      dlg.showModal();
+      if (!isConfirm) { input.focus(); input.select(); }
+    });
+  }
+
+  // ---------- Toast con deshacer ----------
+  let toastTimer;
+  function toast(msg, undoable = false) {
+    $('toastMsg').textContent = msg;
+    $('toastUndo').hidden = !undoable || !undoSnapshot;
+    $('toast').hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { $('toast').hidden = true; }, 4000);
+  }
+  $('toastUndo').addEventListener('click', () => {
+    if (!undoSnapshot) return;
+    state = JSON.parse(undoSnapshot);
+    undoSnapshot = null;
+    if (currentListId && !getList(currentListId)) currentListId = null;
+    save(); render();
+    $('toast').hidden = true;
+  });
+
+  // ---------- Render ----------
+  function render() {
+    const list = currentListId && getList(currentListId);
+    $('homeView').hidden = !!list;
+    $('listView').hidden = !list;
+    $('backBtn').hidden = !list;
+    $('title').textContent = list ? `${list.emoji} ${list.name}` : 'Dilo';
+    if (list) renderList(list); else renderHome();
+  }
+
+  function renderHome() {
+    const wrap = $('lists');
+    wrap.innerHTML = '';
+    for (const l of state.lists) {
+      const pending = l.items.filter((i) => !i.done).length;
+      const b = document.createElement('button');
+      b.className = 'list-card' + (l.name === INBOX_NAME ? ' inbox' : '');
+      b.innerHTML = `<span class="emoji"></span><span class="name"></span><span class="count"></span>`;
+      b.querySelector('.emoji').textContent = l.emoji;
+      b.querySelector('.name').textContent = l.name;
+      const c = b.querySelector('.count');
+      c.textContent = pending;
+      if (pending) c.classList.add('has');
+      b.addEventListener('click', () => { currentListId = l.id; render(); window.scrollTo(0, 0); });
+      wrap.appendChild(b);
+    }
+  }
+
+  function fmtDate(ts) {
+    return new Date(ts).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderList(list) {
+    const ul = $('items');
+    ul.innerHTML = '';
+    const isInbox = list.name === INBOX_NAME;
+    $('emptyMsg').hidden = list.items.length > 0;
+    $('deleteListBtn').hidden = isInbox;
+    $('renameListBtn').hidden = isInbox;
+
+    const sorted = [...list.items].sort((a, b) => a.done - b.done);
+    for (const item of sorted) {
+      const li = document.createElement('li');
+      li.className = 'item' + (item.done ? ' done' : '');
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = item.done;
+      cb.setAttribute('aria-label', 'Completado');
+      cb.addEventListener('change', () => { item.done = cb.checked; save(); render(); });
+
+      const text = document.createElement('div');
+      text.className = 'text';
+      text.textContent = item.text;
+      const date = document.createElement('span');
+      date.className = 'date';
+      date.textContent = fmtDate(item.createdAt);
+      text.appendChild(date);
+      if (item.audioId) {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        getAudio(item.audioId).then((blob) => { if (blob) audio.src = URL.createObjectURL(blob); });
+        text.appendChild(audio);
+      }
+
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+
+      // Mover a otra lista (clave para organizar la bandeja de entrada)
+      const sel = document.createElement('select');
+      sel.setAttribute('aria-label', 'Mover a lista');
+      sel.innerHTML = '<option value="">📂</option>';
+      sel.title = isInbox ? 'Organizar en una lista' : 'Mover a otra lista';
+      for (const l of state.lists) {
+        if (l.id === list.id) continue;
+        const o = document.createElement('option');
+        o.value = l.id;
+        o.textContent = `${l.emoji} ${l.name}`;
+        sel.appendChild(o);
+      }
+      const n = document.createElement('option');
+      n.value = '__new';
+      n.textContent = '+ Nueva lista…';
+      sel.appendChild(n);
+      sel.addEventListener('change', async () => {
+        let target = null;
+        if (sel.value === '__new') {
+          const name = await ask('Nombre de la nueva lista');
+          if (name && name.trim()) target = ensureList(name.trim());
+        } else if (sel.value) {
+          target = getList(sel.value);
+        }
+        if (!target) { sel.value = ''; return; }
+        snapshot();
+        list.items = list.items.filter((i) => i.id !== item.id);
+        target.items.unshift(item);
+        save(); render();
+        toast(`Movido a ${target.emoji} ${target.name}`, true);
+      });
+
+      const edit = document.createElement('button');
+      edit.textContent = '✏️';
+      edit.setAttribute('aria-label', 'Editar');
+      edit.addEventListener('click', async () => {
+        const t = await ask('Editar', item.text);
+        if (t && t.trim()) { item.text = t.trim(); save(); render(); }
+      });
+
+      const del = document.createElement('button');
+      del.textContent = '🗑️';
+      del.setAttribute('aria-label', 'Borrar');
+      del.addEventListener('click', () => {
+        snapshot();
+        list.items = list.items.filter((i) => i.id !== item.id);
+        save(); render();
+        toast('Elemento borrado', true);
+      });
+
+      actions.append(sel, edit, del);
+      li.append(cb, text, actions);
+      ul.appendChild(li);
+    }
+  }
+
+  // ---------- Acciones de lista ----------
+  $('backBtn').addEventListener('click', () => { currentListId = null; render(); });
+  $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
+
+  $('newListBtn').addEventListener('click', async () => {
+    const name = await ask('Nombre de la nueva lista');
+    if (!name || !name.trim()) return;
+    snapshot();
+    const list = ensureList(name.trim());
+    save();
+    currentListId = list.id;
+    render();
+  });
+
+  $('clearDoneBtn').addEventListener('click', () => {
+    const list = getList(currentListId);
+    if (!list || !list.items.some((i) => i.done)) return;
+    snapshot();
+    list.items = list.items.filter((i) => !i.done);
+    save(); render();
+    toast('Completadas borradas', true);
+  });
+
+  $('renameListBtn').addEventListener('click', async () => {
+    const list = getList(currentListId);
+    const name = await ask('Nuevo nombre', list.name);
+    if (!name || !name.trim()) return;
+    list.name = name.trim();
+    list.emoji = emojiFor(list.name);
+    save(); render();
+  });
+
+  $('deleteListBtn').addEventListener('click', async () => {
+    const list = getList(currentListId);
+    if (!list || !(await ask(`¿Eliminar la lista «${list.name}» y todo su contenido?`, null, 'Eliminar'))) return;
+    snapshot();
+    state.lists = state.lists.filter((l) => l.id !== list.id);
+    currentListId = null;
+    save(); render();
+    toast('Lista eliminada', true);
+  });
+
+  // Limpia audios huérfanos al arrancar (p. ej. tras borrar notas)
+  (async () => {
+    try {
+      const used = new Set(state.lists.flatMap((l) => l.items.map((i) => i.audioId).filter(Boolean)));
+      const d = await db();
+      const req = d.transaction('clips').objectStore('clips').getAllKeys();
+      req.onsuccess = () => req.result.forEach((k) => { if (!used.has(k)) deleteAudio(k); });
+    } catch (e) { /* sin IndexedDB */ }
+  })();
+
+  // Atajo: abrir la app con ?voz para empezar a hablar directamente
+  if (new URLSearchParams(location.search).has('voz')) {
+    setTimeout(() => micBtn.click(), 300);
+  }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  render();
+})();
+</script>
