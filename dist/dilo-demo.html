@@ -139,7 +139,8 @@ main {
 }
 
 .toast {
-  position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 20;
+  position: fixed; left: 16px; right: 16px; bottom: 120px; z-index: 20;
+  width: fit-content; margin: 0 auto;
   display: flex; gap: 12px; align-items: center;
   max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 12px;
   background: var(--toast-bg); color: var(--toast-fg); box-shadow: 0 8px 30px rgb(0 0 0 / .25);
@@ -168,10 +169,17 @@ body::before {
 .primary-btn.danger-btn { background: var(--danger); }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .mic.recording { animation: none; } }
+
+.back-btn {
+  flex: none; display: inline-flex; align-items: center; gap: 4px;
+  padding: 8px 14px 8px 10px; border-radius: 99px; border: 0;
+  background: var(--accent); color: var(--on-accent);
+  font-size: 1rem; font-weight: 700;
+}
 </style>
 
   <header class="topbar">
-    <button id="backBtn" class="icon-btn" hidden aria-label="Volver">←</button>
+    <button id="backBtn" class="back-btn" hidden aria-label="Volver a las listas">‹ Listas</button>
     <h1 id="title">Dilo</h1>
     <button id="helpBtn" class="icon-btn" aria-label="Ayuda">?</button>
   </header>
@@ -217,8 +225,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     <ul>
       <li><b>«Añade leche, pan y huevos a la compra»</b></li>
       <li><b>«Compra tomates»</b> — empieza con el nombre de la lista</li>
-      <li><b>«Apunta llamar al dentista en tareas»</b></li>
-      <li><b>«Crea una lista de regalos de Navidad»</b></li>
+      <li><b>«Apunta en tareas limpiar el motor»</b> o <b>«Apunta limpiar el motor en tareas»</b></li>
+      <li><b>«Crea una lista de regalos»</b>, <b>«Hazme una lista nueva de viajes»</b></li>
+      <li>Si estás <b>dentro de una lista</b> y no nombras otra, se apunta en esa lista.</li>
       <li><b>«Añade una bici a la lista de regalos»</b> — si no existe, la crea</li>
       <li><b>Cualquier otra cosa</b> se guarda en la <i>Bandeja de entrada</i> para organizarla luego.</li>
     </ul>
@@ -291,39 +300,81 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
       .map(capitalize);
   }
 
-  const CREATE_RE = /^(?:crea|crear|creame|haz|hazme|abre|nueva|nuevo|empieza)\s+(?:una\s+)?(?:nueva\s+)?lista\s+(?:de\s+|llamada\s+|para\s+)?(.+)$/i;
-  const NEW_LIST_RE = /^(?:nueva|una nueva)\s+lista\s*(?:de\s+|llamada\s+|para\s+)?(.+)$/i;
-  const ADD_VERBS = '(?:anade|anadir|anademe|agrega|agregar|apunta|apuntame|apuntar|pon|ponme|poner|mete|meter|incluye|incluir|guarda|guardar|anota|anotar)';
-  const ADD_RE = new RegExp('^' + ADD_VERBS + '\\s+(.+)\\s+(?:a|en|al)\\s+(.+)$', 'i');
-  const ADD_NO_LIST_RE = new RegExp('^' + ADD_VERBS + '\\s+(.+)$', 'i');
+  const ADD_VERBS = '(?:anade|anadir|anademe|anademe|agrega|agregar|agregame|apunta|apuntame|apuntar|pon|ponme|poner|mete|meter|meteme|incluye|incluir|guarda|guardar|guardame|anota|anotar|anotame|escribe|escribir|escribeme|recuerdame)';
+  const ADD_VERB_RE = new RegExp('^' + ADD_VERBS + '\\s+', 'i');
+  const CREATE_VERB_RE = /^(?:crea|crear|creame|haz|hacer|hazme|abre|abrir|abreme|empieza|empezar|nueva|nuevo|anade|anadir|agrega)\b/;
+  // Palabras de cortesía o de arranque que no aportan nada
+  const LEAD_RE = /^(?:(?:oye|vale|bueno|venga|hola|dilo|por favor|quiero que|quiero|quisiera|me gustaria|necesito|puedes|podrias|me|tu)\s+)+/;
+  const TRAIL_RE = /\s+(?:por favor|gracias)$/;
+  const NAME_LEAD_RE = /^(?:(?:una|un|la|el|nueva|nuevo|que se llame|llamada|llamado|con el nombre de|con el nombre|de nombre|de|para|sobre)\s+)+/;
+
+  // Si se repite la frase entera ("compra pan compra pan") nos quedamos con una
+  function collapseRepeat(str) {
+    const w = str.split(' ');
+    for (let n = 1; n <= w.length / 2; n++) {
+      if (w.length % n) continue;
+      const key = (i) => normalize(w.slice(i, i + n).join(' '));
+      let all = true;
+      for (let i = n; i < w.length; i += n) if (key(i) !== key(0)) { all = false; break; }
+      if (all && n < w.length) return w.slice(0, n).join(' ');
+    }
+    return str;
+  }
 
   function parse(rawText, lists) {
-    const original = rawText.trim().replace(/\s+/g, ' ');
-    const text = normalize(original);
+    // orig y text tienen la misma longitud: text es orig sin tildes y en minúsculas
+    let orig = rawText.replace(/[.!?¡¿;:]/g, '').replace(/\s+/g, ' ').trim();
+    orig = collapseRepeat(orig);
+    let text = normalize(orig);
     if (!text) return null;
 
-    // Para devolver el texto con tildes originales usamos posiciones equivalentes:
-    // normalize() no cambia la longitud salvo signos de puntuación, así que
-    // recortamos sobre una versión sin puntuación del original.
-    const orig = original.replace(/[.!?¡¿;:]/g, '').replace(/\s+/g, ' ').trim();
-    const sliceOrig = (start, len) => orig.substr(start, len);
+    const cut = (from, to) => { orig = orig.slice(from, to).trim(); text = normalize(orig); };
+    let m = text.match(LEAD_RE);
+    if (m) cut(m[0].length);
+    m = text.match(TRAIL_RE);
+    if (m) cut(0, text.length - m[0].length);
+    if (!text) return null;
 
-    // 1) Crear lista
-    let m = text.match(CREATE_RE) || text.match(NEW_LIST_RE);
-    if (m) {
-      const start = text.lastIndexOf(m[1]);
-      const name = cleanListName(sliceOrig(start, m[1].length));
-      if (name) return { type: 'create', list: capitalize(name) };
+    // 1) Crear lista: "crea una lista de viajes", "hazme una lista nueva que se llame viajes",
+    //    "nueva lista viajes", "añade una lista de regalos"
+    const listIdx = text.search(/\blista\b/);
+    if (listIdx >= 0 && (CREATE_VERB_RE.test(text) || /^lista nuev[ao]\b/.test(text))) {
+      const before = text.slice(0, listIdx).trim().split(' ');
+      if (before.length <= 3) {
+        const after = orig.slice(listIdx + 5).trim();
+        const lead = normalize(after).match(NAME_LEAD_RE);
+        const name = (lead ? after.slice(lead[0].length) : after).trim();
+        if (name) return { type: 'create', list: capitalize(name) };
+      }
     }
 
-    // 2) Añadir X a/en LISTA
-    m = text.match(ADD_RE);
-    if (m) {
-      // Probamos todos los cortes posibles " a|en|al " empezando por el último
-      const verbMatch = text.match(new RegExp('^' + ADD_VERBS + '\\s+', 'i'));
-      const body = text.slice(verbMatch[0].length);
-      const bodyOrig = orig.slice(verbMatch[0].length);
-      const sepRe = /\s(?:a|en|al)\s/g;
+    // 2) Añadir: quitamos el verbo ("apunta", "añade"...) si lo hay
+    const verb = text.match(ADD_VERB_RE);
+    const body = verb ? text.slice(verb[0].length) : text;
+    const bodyOrig = verb ? orig.slice(verb[0].length) : orig;
+
+    // 2a) La lista va delante: "apunta en tareas limpiar el motor", "compra: leche y pan",
+    //     "en la lista de la compra pan"
+    const sortedLists = [...lists].sort((a, b) => b.name.length - a.name.length);
+    const listPrefix = /^(?:(?:a|en|al|para)\s+)?(?:(?:la|el|mi)\s+)?(?:lista\s+(?:de\s+)?(?:(?:la|el|las|los)\s+)?)?/;
+    const pre = body.match(listPrefix)[0];
+    for (const l of sortedLists) {
+      const n = normalize(cleanListName(l.name));
+      for (const cand of [n, singular(n) === n ? n + 's' : singular(n)]) {
+        const rest = body.slice(pre.length);
+        if (rest === cand) continue;
+        if (rest.startsWith(cand + ' ')) {
+          let items = bodyOrig.slice(pre.length + cand.length).replace(/^[\s,]+/, '');
+          const v = normalize(items).match(ADD_VERB_RE);
+          if (v) items = items.slice(v[0].length);
+          if (items) return { type: 'add', list: l.name, items: splitItems(items) };
+        }
+      }
+    }
+
+    // 2b) La lista va detrás: "añade leche y pan a la compra"
+    if (verb) {
+      const sepRe = /\s(?:a|en|al|para)\s/g;
       const cuts = [];
       let s;
       while ((s = sepRe.exec(body))) {
@@ -332,48 +383,26 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
       }
       for (let i = cuts.length - 1; i >= 0; i--) {
         const c = cuts[i];
-        const itemPart = bodyOrig.slice(0, c.idx);
-        const listPart = bodyOrig.slice(c.idx + c.len);
-        const existing = findList(lists, listPart);
+        const existing = findList(lists, bodyOrig.slice(c.idx + c.len));
         if (existing) {
-          return { type: 'add', list: existing.name, items: splitItems(itemPart) };
+          return { type: 'add', list: existing.name, items: splitItems(bodyOrig.slice(0, c.idx)) };
         }
       }
-      // Si dice explícitamente "lista", la creamos
+      // Si dice explícitamente "lista" y no existe, la creamos
       for (let i = cuts.length - 1; i >= 0; i--) {
         const c = cuts[i];
-        const listPartNorm = body.slice(c.idx + c.len);
-        if (/^(?:(?:la|mi)\s+)?lista\b/.test(listPartNorm)) {
-          const itemPart = bodyOrig.slice(0, c.idx);
+        if (/^(?:(?:la|mi)\s+)?lista\b/.test(body.slice(c.idx + c.len))) {
           const name = cleanListName(bodyOrig.slice(c.idx + c.len));
           if (name) {
-            return { type: 'add', list: capitalize(name), items: splitItems(itemPart), created: true };
+            return { type: 'add', list: capitalize(name), items: splitItems(bodyOrig.slice(0, c.idx)), created: true };
           }
         }
       }
+      // "apunta X" sin lista -> bandeja de entrada
+      return { type: 'inbox', list: INBOX_NAME, items: [capitalize(bodyOrig.trim())] };
     }
 
-    // 3) Empieza por el nombre de una lista: "compra: leche y pan" / "tareas llamar al médico"
-    const sortedLists = [...lists].sort((a, b) => b.name.length - a.name.length);
-    for (const l of sortedLists) {
-      const n = normalize(l.name);
-      const prefixes = [n, 'lista de ' + n, 'lista ' + n, 'en ' + n, 'para ' + n];
-      for (const p of prefixes) {
-        if (text.startsWith(p + ' ') && text.length > p.length + 1) {
-          const rest = orig.slice(p.length).replace(/^[\s,]+/, '');
-          if (rest) return { type: 'add', list: l.name, items: splitItems(rest) };
-        }
-      }
-    }
-
-    // 4) "apunta X" sin lista -> bandeja de entrada
-    m = text.match(ADD_NO_LIST_RE);
-    if (m) {
-      const verbLen = text.length - m[1].length;
-      return { type: 'inbox', list: INBOX_NAME, items: [capitalize(orig.slice(verbLen).trim())] };
-    }
-
-    // 5) Cualquier otra cosa: se guarda tal cual para organizarla luego
+    // 3) Cualquier otra cosa: se guarda tal cual para organizarla luego
     return { type: 'inbox', list: INBOX_NAME, items: [capitalize(orig)] };
   }
 
@@ -500,6 +529,17 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     if (!result) return;
     snapshot();
 
+    // Si estás dentro de una lista y no nombras otra, va a la lista que tienes abierta
+    const open = currentListId && getList(currentListId);
+    if (result.type === 'inbox' && open && open.name !== INBOX_NAME) {
+      const items = window.VoiceParser.splitItems(result.items[0]);
+      addItems(open, items);
+      save(); render();
+      const what = items.length === 1 ? `«${items[0]}»` : `${items.length} elementos`;
+      toast(`${open.emoji} ${what} → ${open.name}`, true);
+      return;
+    }
+
     if (result.type === 'create') {
       const exists = findList(state.lists, result.list);
       const list = ensureList(result.list);
@@ -535,19 +575,30 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     recognition = new SR();
     recognition.lang = 'es-ES';
     recognition.interimResults = true;
-    recognition.continuous = true;
+    // En Android, el modo continuo repite lo ya dicho en cada resultado.
+    // Allí escuchamos una sola frase (se para sola al dejar de hablar).
+    recognition.continuous = !/Android/i.test(navigator.userAgent);
+    recognition.maxAlternatives = 1;
     finalText = '';
+    let lastInterim = '';
     let failedOver = false;
 
     recognition.onresult = (e) => {
-      let interim = '';
-      finalText = '';
+      let text = '';
+      lastInterim = '';
       for (let i = 0; i < e.results.length; i++) {
         const r = e.results[i];
-        if (r.isFinal) finalText += r[0].transcript + ' ';
-        else interim += r[0].transcript;
+        const t = r[0].transcript.trim();
+        if (!t) continue;
+        if (!r.isFinal) { lastInterim = t; continue; }
+        // Si un resultado ya contiene todo lo anterior, lo sustituye en vez de sumarse
+        const a = text.toLowerCase();
+        const b = t.toLowerCase();
+        if (b.startsWith(a)) text = t;
+        else if (!a.endsWith(b)) text = (text + ' ' + t).trim();
       }
-      live.textContent = (finalText + interim).trim() || 'Escuchando…';
+      finalText = text;
+      live.textContent = (finalText + ' ' + lastInterim).trim() || 'Escuchando…';
     };
     recognition.onerror = (e) => {
       if (e.error === 'network' || e.error === 'service-not-allowed' || e.error === 'language-not-supported') {
@@ -563,12 +614,12 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     recognition.onend = () => {
       if (failedOver) return;
       setRecording(false);
-      const text = finalText.trim();
+      const text = (finalText || lastInterim).trim();
       if (text) handleInput(text);
       recognition = null;
     };
     recognition.start();
-    setRecording(true, 'Escuchando… pulsa otra vez para terminar');
+    setRecording(true, recognition.continuous ? 'Escuchando… pulsa otra vez para terminar' : 'Escuchando… habla ahora');
   }
 
   async function startAudioRecording() {
@@ -626,17 +677,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     const input = $('textInput');
     const text = input.value.trim();
     if (!text) return;
-    // Dentro de una lista (que no sea la bandeja), lo escrito va directo a esa lista
-    // salvo que sea un comando explícito.
-    const list = currentListId && getList(currentListId);
-    const parsed = parse(text, state.lists);
-    if (list && list.name !== INBOX_NAME && parsed.type === 'inbox') {
-      snapshot();
-      addItems(list, window.VoiceParser.splitItems(parsed.items[0]));
-      save(); render();
-    } else {
-      handleInput(text);
-    }
+    handleInput(text);
     input.value = '';
   });
 

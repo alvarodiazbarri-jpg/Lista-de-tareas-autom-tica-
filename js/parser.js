@@ -51,39 +51,81 @@
       .map(capitalize);
   }
 
-  const CREATE_RE = /^(?:crea|crear|creame|haz|hazme|abre|nueva|nuevo|empieza)\s+(?:una\s+)?(?:nueva\s+)?lista\s+(?:de\s+|llamada\s+|para\s+)?(.+)$/i;
-  const NEW_LIST_RE = /^(?:nueva|una nueva)\s+lista\s*(?:de\s+|llamada\s+|para\s+)?(.+)$/i;
-  const ADD_VERBS = '(?:anade|anadir|anademe|agrega|agregar|apunta|apuntame|apuntar|pon|ponme|poner|mete|meter|incluye|incluir|guarda|guardar|anota|anotar)';
-  const ADD_RE = new RegExp('^' + ADD_VERBS + '\\s+(.+)\\s+(?:a|en|al)\\s+(.+)$', 'i');
-  const ADD_NO_LIST_RE = new RegExp('^' + ADD_VERBS + '\\s+(.+)$', 'i');
+  const ADD_VERBS = '(?:anade|anadir|anademe|anademe|agrega|agregar|agregame|apunta|apuntame|apuntar|pon|ponme|poner|mete|meter|meteme|incluye|incluir|guarda|guardar|guardame|anota|anotar|anotame|escribe|escribir|escribeme|recuerdame)';
+  const ADD_VERB_RE = new RegExp('^' + ADD_VERBS + '\\s+', 'i');
+  const CREATE_VERB_RE = /^(?:crea|crear|creame|haz|hacer|hazme|abre|abrir|abreme|empieza|empezar|nueva|nuevo|anade|anadir|agrega)\b/;
+  // Palabras de cortesía o de arranque que no aportan nada
+  const LEAD_RE = /^(?:(?:oye|vale|bueno|venga|hola|dilo|por favor|quiero que|quiero|quisiera|me gustaria|necesito|puedes|podrias|me|tu)\s+)+/;
+  const TRAIL_RE = /\s+(?:por favor|gracias)$/;
+  const NAME_LEAD_RE = /^(?:(?:una|un|la|el|nueva|nuevo|que se llame|llamada|llamado|con el nombre de|con el nombre|de nombre|de|para|sobre)\s+)+/;
+
+  // Si se repite la frase entera ("compra pan compra pan") nos quedamos con una
+  function collapseRepeat(str) {
+    const w = str.split(' ');
+    for (let n = 1; n <= w.length / 2; n++) {
+      if (w.length % n) continue;
+      const key = (i) => normalize(w.slice(i, i + n).join(' '));
+      let all = true;
+      for (let i = n; i < w.length; i += n) if (key(i) !== key(0)) { all = false; break; }
+      if (all && n < w.length) return w.slice(0, n).join(' ');
+    }
+    return str;
+  }
 
   function parse(rawText, lists) {
-    const original = rawText.trim().replace(/\s+/g, ' ');
-    const text = normalize(original);
+    // orig y text tienen la misma longitud: text es orig sin tildes y en minúsculas
+    let orig = rawText.replace(/[.!?¡¿;:]/g, '').replace(/\s+/g, ' ').trim();
+    orig = collapseRepeat(orig);
+    let text = normalize(orig);
     if (!text) return null;
 
-    // Para devolver el texto con tildes originales usamos posiciones equivalentes:
-    // normalize() no cambia la longitud salvo signos de puntuación, así que
-    // recortamos sobre una versión sin puntuación del original.
-    const orig = original.replace(/[.!?¡¿;:]/g, '').replace(/\s+/g, ' ').trim();
-    const sliceOrig = (start, len) => orig.substr(start, len);
+    const cut = (from, to) => { orig = orig.slice(from, to).trim(); text = normalize(orig); };
+    let m = text.match(LEAD_RE);
+    if (m) cut(m[0].length);
+    m = text.match(TRAIL_RE);
+    if (m) cut(0, text.length - m[0].length);
+    if (!text) return null;
 
-    // 1) Crear lista
-    let m = text.match(CREATE_RE) || text.match(NEW_LIST_RE);
-    if (m) {
-      const start = text.lastIndexOf(m[1]);
-      const name = cleanListName(sliceOrig(start, m[1].length));
-      if (name) return { type: 'create', list: capitalize(name) };
+    // 1) Crear lista: "crea una lista de viajes", "hazme una lista nueva que se llame viajes",
+    //    "nueva lista viajes", "añade una lista de regalos"
+    const listIdx = text.search(/\blista\b/);
+    if (listIdx >= 0 && (CREATE_VERB_RE.test(text) || /^lista nuev[ao]\b/.test(text))) {
+      const before = text.slice(0, listIdx).trim().split(' ');
+      if (before.length <= 3) {
+        const after = orig.slice(listIdx + 5).trim();
+        const lead = normalize(after).match(NAME_LEAD_RE);
+        const name = (lead ? after.slice(lead[0].length) : after).trim();
+        if (name) return { type: 'create', list: capitalize(name) };
+      }
     }
 
-    // 2) Añadir X a/en LISTA
-    m = text.match(ADD_RE);
-    if (m) {
-      // Probamos todos los cortes posibles " a|en|al " empezando por el último
-      const verbMatch = text.match(new RegExp('^' + ADD_VERBS + '\\s+', 'i'));
-      const body = text.slice(verbMatch[0].length);
-      const bodyOrig = orig.slice(verbMatch[0].length);
-      const sepRe = /\s(?:a|en|al)\s/g;
+    // 2) Añadir: quitamos el verbo ("apunta", "añade"...) si lo hay
+    const verb = text.match(ADD_VERB_RE);
+    const body = verb ? text.slice(verb[0].length) : text;
+    const bodyOrig = verb ? orig.slice(verb[0].length) : orig;
+
+    // 2a) La lista va delante: "apunta en tareas limpiar el motor", "compra: leche y pan",
+    //     "en la lista de la compra pan"
+    const sortedLists = [...lists].sort((a, b) => b.name.length - a.name.length);
+    const listPrefix = /^(?:(?:a|en|al|para)\s+)?(?:(?:la|el|mi)\s+)?(?:lista\s+(?:de\s+)?(?:(?:la|el|las|los)\s+)?)?/;
+    const pre = body.match(listPrefix)[0];
+    for (const l of sortedLists) {
+      const n = normalize(cleanListName(l.name));
+      for (const cand of [n, singular(n) === n ? n + 's' : singular(n)]) {
+        const rest = body.slice(pre.length);
+        if (rest === cand) continue;
+        if (rest.startsWith(cand + ' ')) {
+          let items = bodyOrig.slice(pre.length + cand.length).replace(/^[\s,]+/, '');
+          const v = normalize(items).match(ADD_VERB_RE);
+          if (v) items = items.slice(v[0].length);
+          if (items) return { type: 'add', list: l.name, items: splitItems(items) };
+        }
+      }
+    }
+
+    // 2b) La lista va detrás: "añade leche y pan a la compra"
+    if (verb) {
+      const sepRe = /\s(?:a|en|al|para)\s/g;
       const cuts = [];
       let s;
       while ((s = sepRe.exec(body))) {
@@ -92,48 +134,26 @@
       }
       for (let i = cuts.length - 1; i >= 0; i--) {
         const c = cuts[i];
-        const itemPart = bodyOrig.slice(0, c.idx);
-        const listPart = bodyOrig.slice(c.idx + c.len);
-        const existing = findList(lists, listPart);
+        const existing = findList(lists, bodyOrig.slice(c.idx + c.len));
         if (existing) {
-          return { type: 'add', list: existing.name, items: splitItems(itemPart) };
+          return { type: 'add', list: existing.name, items: splitItems(bodyOrig.slice(0, c.idx)) };
         }
       }
-      // Si dice explícitamente "lista", la creamos
+      // Si dice explícitamente "lista" y no existe, la creamos
       for (let i = cuts.length - 1; i >= 0; i--) {
         const c = cuts[i];
-        const listPartNorm = body.slice(c.idx + c.len);
-        if (/^(?:(?:la|mi)\s+)?lista\b/.test(listPartNorm)) {
-          const itemPart = bodyOrig.slice(0, c.idx);
+        if (/^(?:(?:la|mi)\s+)?lista\b/.test(body.slice(c.idx + c.len))) {
           const name = cleanListName(bodyOrig.slice(c.idx + c.len));
           if (name) {
-            return { type: 'add', list: capitalize(name), items: splitItems(itemPart), created: true };
+            return { type: 'add', list: capitalize(name), items: splitItems(bodyOrig.slice(0, c.idx)), created: true };
           }
         }
       }
+      // "apunta X" sin lista -> bandeja de entrada
+      return { type: 'inbox', list: INBOX_NAME, items: [capitalize(bodyOrig.trim())] };
     }
 
-    // 3) Empieza por el nombre de una lista: "compra: leche y pan" / "tareas llamar al médico"
-    const sortedLists = [...lists].sort((a, b) => b.name.length - a.name.length);
-    for (const l of sortedLists) {
-      const n = normalize(l.name);
-      const prefixes = [n, 'lista de ' + n, 'lista ' + n, 'en ' + n, 'para ' + n];
-      for (const p of prefixes) {
-        if (text.startsWith(p + ' ') && text.length > p.length + 1) {
-          const rest = orig.slice(p.length).replace(/^[\s,]+/, '');
-          if (rest) return { type: 'add', list: l.name, items: splitItems(rest) };
-        }
-      }
-    }
-
-    // 4) "apunta X" sin lista -> bandeja de entrada
-    m = text.match(ADD_NO_LIST_RE);
-    if (m) {
-      const verbLen = text.length - m[1].length;
-      return { type: 'inbox', list: INBOX_NAME, items: [capitalize(orig.slice(verbLen).trim())] };
-    }
-
-    // 5) Cualquier otra cosa: se guarda tal cual para organizarla luego
+    // 3) Cualquier otra cosa: se guarda tal cual para organizarla luego
     return { type: 'inbox', list: INBOX_NAME, items: [capitalize(orig)] };
   }
 

@@ -116,6 +116,17 @@
     if (!result) return;
     snapshot();
 
+    // Si estás dentro de una lista y no nombras otra, va a la lista que tienes abierta
+    const open = currentListId && getList(currentListId);
+    if (result.type === 'inbox' && open && open.name !== INBOX_NAME) {
+      const items = window.VoiceParser.splitItems(result.items[0]);
+      addItems(open, items);
+      save(); render();
+      const what = items.length === 1 ? `«${items[0]}»` : `${items.length} elementos`;
+      toast(`${open.emoji} ${what} → ${open.name}`, true);
+      return;
+    }
+
     if (result.type === 'create') {
       const exists = findList(state.lists, result.list);
       const list = ensureList(result.list);
@@ -151,19 +162,30 @@
     recognition = new SR();
     recognition.lang = 'es-ES';
     recognition.interimResults = true;
-    recognition.continuous = true;
+    // En Android, el modo continuo repite lo ya dicho en cada resultado.
+    // Allí escuchamos una sola frase (se para sola al dejar de hablar).
+    recognition.continuous = !/Android/i.test(navigator.userAgent);
+    recognition.maxAlternatives = 1;
     finalText = '';
+    let lastInterim = '';
     let failedOver = false;
 
     recognition.onresult = (e) => {
-      let interim = '';
-      finalText = '';
+      let text = '';
+      lastInterim = '';
       for (let i = 0; i < e.results.length; i++) {
         const r = e.results[i];
-        if (r.isFinal) finalText += r[0].transcript + ' ';
-        else interim += r[0].transcript;
+        const t = r[0].transcript.trim();
+        if (!t) continue;
+        if (!r.isFinal) { lastInterim = t; continue; }
+        // Si un resultado ya contiene todo lo anterior, lo sustituye en vez de sumarse
+        const a = text.toLowerCase();
+        const b = t.toLowerCase();
+        if (b.startsWith(a)) text = t;
+        else if (!a.endsWith(b)) text = (text + ' ' + t).trim();
       }
-      live.textContent = (finalText + interim).trim() || 'Escuchando…';
+      finalText = text;
+      live.textContent = (finalText + ' ' + lastInterim).trim() || 'Escuchando…';
     };
     recognition.onerror = (e) => {
       if (e.error === 'network' || e.error === 'service-not-allowed' || e.error === 'language-not-supported') {
@@ -179,12 +201,12 @@
     recognition.onend = () => {
       if (failedOver) return;
       setRecording(false);
-      const text = finalText.trim();
+      const text = (finalText || lastInterim).trim();
       if (text) handleInput(text);
       recognition = null;
     };
     recognition.start();
-    setRecording(true, 'Escuchando… pulsa otra vez para terminar');
+    setRecording(true, recognition.continuous ? 'Escuchando… pulsa otra vez para terminar' : 'Escuchando… habla ahora');
   }
 
   async function startAudioRecording() {
@@ -242,17 +264,7 @@
     const input = $('textInput');
     const text = input.value.trim();
     if (!text) return;
-    // Dentro de una lista (que no sea la bandeja), lo escrito va directo a esa lista
-    // salvo que sea un comando explícito.
-    const list = currentListId && getList(currentListId);
-    const parsed = parse(text, state.lists);
-    if (list && list.name !== INBOX_NAME && parsed.type === 'inbox') {
-      snapshot();
-      addItems(list, window.VoiceParser.splitItems(parsed.items[0]));
-      save(); render();
-    } else {
-      handleInput(text);
-    }
+    handleInput(text);
     input.value = '';
   });
 
