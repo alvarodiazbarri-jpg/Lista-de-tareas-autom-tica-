@@ -1,5 +1,5 @@
 // Service worker: permite abrir la app sin conexión.
-const CACHE = 'dilo-v16';
+const CACHE = 'dilo-v17';
 const ASSETS = [
   './',
   'index.html',

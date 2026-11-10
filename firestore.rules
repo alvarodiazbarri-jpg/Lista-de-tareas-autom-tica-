@@ -26,5 +26,10 @@ service cloud.firestore {
         allow read, write: if esDeLaCasa(hogar);
       }
     }
+
+    // Lo privado de cada persona (listas «Solo para mí»): solo lo lee y escribe su dueño
+    match /usuarios/{uid}/{todo=**} {
+      allow read, write: if dentro() && request.auth.uid == uid;
+    }
   }
 }

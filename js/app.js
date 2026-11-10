@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.13';
+  const VERSION = '0.14';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -125,6 +125,9 @@
 
   function pushCloud() {
     if (!nubeDB || !nubeMigrada) return;
+    // Primero se guarda todo y después se borra: así, al pasar una lista de compartida a privada
+    // (o al revés), primero aparece en su sitio nuevo y luego se quita del viejo
+    const borrar = [];
     for (const fuente of FUENTES) {
       const base = fuente === 'casa' ? nubeDB : (miaOk ? miaDB : null);
       if (!base) continue;
@@ -138,10 +141,11 @@
           if (mapa.get(d.id) !== c) { mapa.set(d.id, c); base.collection(col).doc(d.id).set(limpio(d.data)).catch(fallaNube); }
         }
         for (const id of [...mapa.keys()]) {
-          if (!ids.has(id)) { mapa.delete(id); base.collection(col).doc(id).delete().catch(fallaNube); }
+          if (!ids.has(id)) { mapa.delete(id); borrar.push([base, col, id]); }
         }
       }
     }
+    for (const [base, col, id] of borrar) base.collection(col).doc(id).delete().catch(fallaNube);
   }
 
   // Construye las listas a partir de lo que hay en la nube (lo de la casa y lo privado)
@@ -149,6 +153,13 @@
     const lists = [];
     for (const fuente of FUENTES) {
       for (const d of nubeDocs[fuente].listas) {
+        // Mientras se pasa de un sitio a otro puede estar en los dos un momento: vale lo de este móvil
+        const ya = lists.findIndex((x) => x.id === d.id);
+        if (ya >= 0) {
+          const local = getList(d.id);
+          if (!local || !!local.privada !== (fuente === 'mia')) continue;
+          lists.splice(ya, 1);
+        }
         const l = { id: d.id, name: d.data.name || 'Lista', emoji: d.data.emoji || emojiFor(d.data.name || ''), items: [], orden: d.data.orden || 0 };
         if (fuente === 'mia') l.privada = true;
         const otros = otrosCampos(d.data, CAMPOS_LISTA);
@@ -159,11 +170,13 @@
     lists.sort((a, b) => a.orden - b.orden);
     lists.forEach((l) => delete l.orden);
     const porId = new Map(lists.map((l) => [l.id, l]));
+    const vistos = new Set();
     for (const fuente of FUENTES) {
       const detalles = new Map(nubeDocs[fuente].detalles.map((d) => [d.id, d.data]));
       for (const d of nubeDocs[fuente].items) {
         const l = porId.get(d.data.listId);
-        if (!l) continue;
+        if (!l || vistos.has(d.id)) continue;
+        vistos.add(d.id);
         const it = { id: d.id, text: d.data.text || '', done: !!d.data.done, createdAt: d.data.createdAt || 0 };
         if (d.data.audioId) it.audioId = d.data.audioId;
         // Lo de «detalles» manda; si no hay, lo que se guardaba antes dentro de la cosa (versión 0.8)
@@ -189,9 +202,24 @@
   // Si el sitio privado no funciona (faltan las reglas o no hay conexión), las listas privadas
   // que ya había en este móvil se conservan tal cual en vez de desaparecer
   function conservarPrivadas(nube) {
-    if (miaOk) return;
-    for (const l of state.lists) if (l.privada && !nube.lists.some((x) => x.id === l.id)) nube.lists.push(l);
+    if (!miaOk) {
+      for (const l of state.lists) if (l.privada && !nube.lists.some((x) => x.id === l.id)) nube.lists.push(l);
+    }
+    // Una lista que acaba de pasar de compartida a privada (o al revés): la nube avisa por partes
+    // y durante un momento puede faltar o estar a medias, así que se usa la de este móvil
+    const ahora = Date.now();
+    for (const [id, hasta] of enCamino) {
+      if (hasta < ahora) { enCamino.delete(id); continue; }
+      const local = getList(id);
+      if (!local) continue;
+      const i = nube.lists.findIndex((x) => x.id === id);
+      if (i >= 0) nube.lists[i] = local;
+      else nube.lists.splice(Math.min(state.lists.indexOf(local), nube.lists.length), 0, local);
+      const suyos = new Set(local.items.map((x) => x.id));
+      for (const l of nube.lists) if (l !== local) l.items = l.items.filter((x) => !suyos.has(x.id));
+    }
   }
+  const enCamino = new Map();   // id de lista → hasta cuándo se protege
 
   const claveMigrada = () => 'dilo:nube:' + nubeDB.hogarId;
 
@@ -430,18 +458,29 @@
     }
 
     if (result.type === 'create') {
+      // «Crea una lista privada de regalos»: la crea solo para quien la dice
+      const priv = result.list.match(/^(?:privad[ao]|personal|solo para mi|solo para mí)\s+(?:de\s+|para\s+|que se llame\s+)?/i);
+      if (priv && result.list.length > priv[0].length) {
+        result.list = result.list.slice(priv[0].length).replace(/^./, (c) => c.toUpperCase());
+        result.privada = true;
+      }
       const exists = findList(state.lists, result.list);
       const list = ensureList(result.list);
+      if (result.privada && !exists) {
+        const N = window.DiloNube;
+        if (N && N.estado === 'dentro' && miaOk) list.privada = true;
+        else toast('⚠️ La lista se ha creado compartida: las privadas aún no funcionan (faltan las reglas de Firebase).');
+      }
       if (result.items && result.items.length) {
         addItems(list, result.items);
         save(); render();
         const what = result.items.length === 1 ? `«${result.items[0]}»` : `${result.items.length} elementos`;
-        toast(`${list.emoji} ${exists ? '' : 'Lista nueva · '}${what} → ${list.name}`, true);
+        toast(`${list.emoji} ${exists ? '' : list.privada ? 'Lista nueva privada 🔒 · ' : 'Lista nueva · '}${what} → ${list.name}`, true);
         notifySaved(list, result.items);
         return;
       }
       save(); render();
-      toast(exists ? `La lista «${list.name}» ya existía` : `Lista «${list.name}» creada`, true);
+      toast(exists ? `La lista «${list.name}» ya existía` : `Lista «${list.name}» creada${list.privada ? ' 🔒 (solo para ti)' : ''}`, true);
       return;
     }
 
@@ -830,7 +869,7 @@
       const tile = el('button', { class: 'tile', type: 'button', style: estiloTarjeta(l), 'aria-label': `${l.name}, ${pend.length} pendientes` },
         el('span', { class: 'tile-emoji', text: l.emoji }),
         el('span', { class: 'tile-foot' },
-          el('span', { class: 'tile-name' }, l.name,
+          el('span', { class: 'tile-name' }, (l.privada ? '🔒 ' : '') + l.name,
             el('span', { class: 'tile-sub', text: pend.length ? (pend.length === 1 ? '1 pendiente' : `${pend.length} pendientes`) : 'Vacía' })),
           el('span', { class: 'tile-count' + (pend.length ? ' has' : ''), text: String(pend.length) })));
       tile.addEventListener('click', () => { openList(l.id); });
@@ -967,9 +1006,9 @@
     document.documentElement.style.setProperty('--hue', coloresDe(list)[paleta === 'pastel' ? 1 : 0]);
     $('listEmoji').textContent = list.emoji;
     $('title').textContent = list.name;
-    $('listSub').textContent = list.items.length
+    $('listSub').textContent = (list.privada ? '🔒 Solo tú · ' : '') + (list.items.length
       ? `${pend.length} ${pend.length === 1 ? 'pendiente' : 'pendientes'}${hechas.length ? ` · ${hechas.length} ${hechas.length === 1 ? 'hecha' : 'hechas'}` : ''}`
-      : 'Vacía';
+      : 'Vacía');
 
     $('items').replaceChildren(...pend.map((i) => fila(list, i)));
     $('emptyMsg').hidden = pend.length > 0;
@@ -1069,10 +1108,12 @@
   $('listMenuBtn').addEventListener('click', () => {
     const l = getList(currentListId);
     if (!l) return;
-    $('listMenuTitle').textContent = `${l.emoji} ${l.name}`;
+    $('listMenuTitle').textContent = `${l.privada ? '🔒 ' : ''}${l.emoji} ${l.name}`;
+    $('privListBtn').hidden = l.name === INBOX_NAME;
+    $('privListBtn').textContent = l.privada ? '👥 Compartirla con la casa' : '🔒 Hacerla privada (solo para mí)';
     $('listMenu').showModal();
   });
-  for (const id of ['shareListBtn', 'renameListBtn', 'clearDoneBtn', 'deleteListBtn']) {
+  for (const id of ['privListBtn', 'shareListBtn', 'renameListBtn', 'clearDoneBtn', 'deleteListBtn']) {
     $(id).addEventListener('click', () => { if ($('listMenu').open) $('listMenu').close(); });
   }
 
@@ -1125,6 +1166,31 @@
     const list = ensureList(name.trim());
     save();
     openList(list.id);
+  });
+
+  // Lista privada («Solo para mí») o compartida con la casa
+  async function cambiarPrivada(list, privada) {
+    const N = window.DiloNube;
+    if (!N || N.estado !== 'dentro') {
+      toast('Las listas privadas sirven cuando compartes Dilo con la casa (☁️). Ahora todo está solo en este móvil.');
+      return false;
+    }
+    if (!miaOk) {
+      toast('⚠️ Aún no se pueden hacer listas privadas: falta poner las reglas nuevas en Firebase (o no hay conexión).');
+      return false;
+    }
+    if (privada && !(await ask(`¿Hacer privada «${list.name}»? Solo la verás tú, con tu cuenta. Desaparecerá de los móviles de los demás.`, null, 'Hacerla privada'))) return false;
+    if (!privada && !(await ask(`¿Compartir «${list.name}» con la casa? La verán todos.`, null, 'Compartirla'))) return false;
+    snapshot();
+    if (privada) list.privada = true; else delete list.privada;
+    enCamino.set(list.id, Date.now() + 8000);
+    save(); render();
+    toast(privada ? `🔒 «${list.name}» ahora es solo tuya` : `👥 «${list.name}» se comparte con la casa`, true);
+    return true;
+  }
+  $('privListBtn').addEventListener('click', () => {
+    const list = getList(currentListId);
+    if (list) cambiarPrivada(list, !list.privada);
   });
 
   // Copiar la lista como texto (para pegarla en WhatsApp, en un correo o en el chat con Claude)
