@@ -10,11 +10,13 @@ Lista de mejoras para la app. Marca con [x] lo que esté hecho.
 2. [ ] **Compartir con mi mujer** (y con la familia) *Hecho en la versión 0.6 (☁️ → Invitar), falta probarlo.*: que ella instale Dilo en su móvil, entre con su cuenta de Google y veamos las mismas citas y listas. Lo que apunte uno aparece en el móvil del otro en segundos. Necesita el punto 1.
    - Elegir qué se comparte: la agenda seguro; ¿también la compra? ¿Las tareas e ideas de cada uno quedan privadas?
 3. [x] **Quién y cuándo** *Hecho en la versión 0.8.1, falta probarlo con dos móviles.*: en cada cosa apuntada (listas y agenda) que se vea **quién la apuntó** (Álvaro, Bea…, con su foto o inicial y su color) y **cuándo** («Hace 5 min», «Ayer 18:30»). También quién la marcó como hecha. Guardar el correo de quien apunta en la nube.
-4. [ ] **Apuntar citas con la voz**: «cita con el dentista el martes a las 10 para Julia» → se guarda en Mi agenda con fecha, hora, lugar y persona, y llega la notificación de confirmación.
-5. [ ] **Recetas dentro de Dilo**, igual que se ha hecho con la agenda (copiar «Recetas de Karlos Bernal» y «Comidas de la semana»).
-6. [ ] **Leer citas desde fotos** (lo que hacía «Importar» en la Mi agenda de Claude): buscar otra forma, porque fuera de claude.ai no se puede usar a Claude así.
-7. [ ] **Apuntar con el móvil bloqueado**: un atajo de Android (Tasker o rutina de Google) que dicte la idea y la envíe a la nube; Dilo la recoge en la Bandeja de entrada al abrirse. Necesita el punto 1.
-8. [ ] **Avisos de citas con la app cerrada**: ahora solo saltan con Dilo abierta. Con la nube se pueden mandar notificaciones de verdad (o seguir usando «Añadir al calendario del móvil»).
+4. [ ] **Las listas se ajustan a la pantalla**: que la pantalla de inicio quepa siempre sin desplazarse; cuantas más listas haya, más pequeñas se hacen las tarjetas (y si no caben, quitar primero las cosas de vista previa y luego pasar a 3 columnas o a filas compactas).
+5. [ ] **Borrar por voz**: «quita la leche de la compra», «borra pan», «elimina llamar al taller de tareas». Buscar la cosa apuntada aunque no se diga exactamente igual, borrarla con aviso y botón «Deshacer». Pensar también «marca la leche como hecha».
+6. [ ] **Apuntar citas con la voz**: «cita con el dentista el martes a las 10 para Julia» → se guarda en Mi agenda con fecha, hora, lugar y persona, y llega la notificación de confirmación.
+7. [ ] **Recetas dentro de Dilo**, igual que se ha hecho con la agenda (copiar «Recetas de Karlos Bernal» y «Comidas de la semana»).
+8. [ ] **Leer citas desde fotos** (lo que hacía «Importar» en la Mi agenda de Claude): buscar otra forma, porque fuera de claude.ai no se puede usar a Claude así.
+9. [ ] **Apuntar con el móvil bloqueado**: un atajo de Android (Tasker o rutina de Google) que dicte la idea y la envíe a la nube; Dilo la recoge en la Bandeja de entrada al abrirse. Necesita el punto 1.
+10. [ ] **Avisos de citas con la app cerrada**: ahora solo saltan con Dilo abierta. Con la nube se pueden mandar notificaciones de verdad (o seguir usando «Añadir al calendario del móvil»).
 
 ## Por revisar
 - [ ] Listas privadas: ahora todo lo de Dilo se comparte con la casa. ¿Queremos que algunas listas (ideas, tareas personales) sean solo de uno?
