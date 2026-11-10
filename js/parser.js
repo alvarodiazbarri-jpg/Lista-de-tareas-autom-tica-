@@ -1,5 +1,5 @@
 // Interpreta lo que dices y decide qué hacer con ello.
-// Devuelve { type: 'create' | 'add' | 'inbox', list?, items? }
+// Devuelve { type: 'create' | 'add' | 'inbox' | 'delete' | 'done', list?, items? }
 
 (function (global) {
   const INBOX_NAME = 'Bandeja de entrada';
@@ -59,6 +59,46 @@
   const TRAIL_RE = /\s+(?:por favor|gracias)$/;
   const NAME_LEAD_RE = /^(?:(?:una|un|la|el|nueva|nuevo|que se llame|llamada|llamado|con el nombre de|con el nombre|de nombre|de|para|sobre)\s+)+/;
 
+  // Borrar o marcar como hecho: «quita la leche de la compra», «borra pan», «tacha el pan»,
+  // «marca la leche como hecha». La lista es opcional y solo cuenta si existe.
+  const DEL_RE = /^(?:quita|quitar|quitame|borra|borrar|borrame|elimina|eliminar|eliminame|saca|sacar|sacame|suprime|suprimir)\s+/;
+  const DONE_RE = /^(?:tacha|tachar|tachame|marca|marcar|marcame)\s+/;
+  const DONE_TAIL_RE = /\s+(?:como\s+)?(?:hech[oa]s?|terminad[oa]s?|completad[oa]s?|comprad[oa]s?)$/;
+  const ARTICULOS_RE = /^(?:(?:el|la|los|las|un|una|unos|unas|lo de|eso de)\s+)+/;
+
+  function parseQuitar(text, orig, lists) {
+    let type = null;
+    let m = text.match(DEL_RE);
+    if (m) type = 'delete';
+    else if ((m = text.match(DONE_RE))) type = 'done';
+    if (!type) return null;
+    let body = text.slice(m[0].length);
+    let bodyOrig = orig.slice(m[0].length);
+    // «marca la leche como hecha»: quitamos «como hecha»
+    const t = body.match(DONE_TAIL_RE);
+    if (t) { body = body.slice(0, t.index); bodyOrig = bodyOrig.slice(0, t.index); }
+    // «marca como hecho el pan»
+    const h = body.match(/^como\s+(?:hech[oa]s?|terminad[oa]s?|completad[oa]s?)\s+/);
+    if (h) { body = body.slice(h[0].length); bodyOrig = bodyOrig.slice(h[0].length); }
+    // La lista, si se dice: «... de la compra», «... en tareas», «... de la lista de regalos»
+    let list = null;
+    const sepRe = /\s(?:de|del|en|a|al)\s/g;
+    const cuts = [];
+    let sm;
+    while ((sm = sepRe.exec(body))) { cuts.push({ idx: sm.index, len: sm[0].length }); sepRe.lastIndex = sm.index + 1; }
+    // De izquierda a derecha, para que «de la lista de la compra» se quite entero
+    for (let i = 0; i < cuts.length && !list; i++) {
+      const c = cuts[i];
+      const found = findList(lists, bodyOrig.slice(c.idx + c.len));
+      if (found) { list = found.name; body = body.slice(0, c.idx); bodyOrig = bodyOrig.slice(0, c.idx); }
+    }
+    const items = splitItems(bodyOrig)
+      .map((x) => x.replace(new RegExp(ARTICULOS_RE.source, 'i'), '').trim())
+      .filter(Boolean);
+    if (!items.length) return null;
+    return { type, list, items };
+  }
+
   // Si se repite la frase entera ("compra pan compra pan") nos quedamos con una
   function collapseRepeat(str) {
     const w = str.split(' ');
@@ -93,6 +133,10 @@
     m = text.match(TRAIL_RE);
     if (m) cut(0, text.length - m[0].length);
     if (!text) return null;
+
+    // 0) Borrar o marcar como hecho
+    const q = parseQuitar(text, orig, lists);
+    if (q) return q;
 
     // 1) Crear lista: "crea una lista de viajes", "hazme una lista nueva que se llame viajes",
     //    "nueva lista viajes", "añade una lista de regalos"

@@ -15,12 +15,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
-  <link rel="stylesheet" href="styles.css?v=0.11">
+  <link rel="stylesheet" href="styles.css?v=0.12">
 </head>
 <body>
   <!-- Cabecera de inicio -->
   <header class="home-head" id="homeHead">
-    <span class="hh-logo" aria-hidden="true">🎙️</span>
+    <img class="hh-logo" src="icons/icon.svg" alt="" aria-hidden="true">
     <div class="hh-text">
       <h1 class="hh-title">Dilo <span class="firma">APP by BARRI</span></h1>
       <p class="hh-date" id="hoyFecha"></p>
@@ -125,6 +125,8 @@
       <li><b>«Crea una lista de viajes y apunta pasaporte y maleta»</b> o <b>«Crea una lista de viajes con pasaporte»</b> — crea la lista y apunta a la vez</li>
       <li>Si estás <b>dentro de una lista</b> y no nombras otra, se apunta en esa lista.</li>
       <li><b>«Añade una bici a la lista de regalos»</b> — si no existe, la crea</li>
+      <li><b>«Quita la leche de la compra»</b>, <b>«Borra pan»</b>, <b>«Elimina llamar al taller»</b> — borra lo apuntado (con «Deshacer»)</li>
+      <li><b>«Tacha el pan»</b> o <b>«Marca la leche como hecha»</b> — lo marca como hecho</li>
       <li><b>Cualquier otra cosa</b> se guarda en la <i>Bandeja de entrada</i> para organizarla luego.</li>
     </ul>
     <p>Si no hay conexión o el navegador no reconoce la voz, se graba el audio y lo encontrarás en la Bandeja de entrada.</p>
@@ -182,8 +184,8 @@
     </form>
   </dialog>
 
-  <script src="js/parser.js?v=0.11"></script>
-  <script src="js/app.js?v=0.11"></script>
-  <script type="module" src="js/nube.js?v=0.11"></script>
+  <script src="js/parser.js?v=0.12"></script>
+  <script src="js/app.js?v=0.12"></script>
+  <script type="module" src="js/nube.js?v=0.12"></script>
 </body>
 </html>

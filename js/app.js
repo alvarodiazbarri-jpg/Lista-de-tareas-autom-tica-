@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.11';
+  const VERSION = '0.12';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -302,9 +302,75 @@
   }
 
   // ---------- Procesar lo dicho/escrito ----------
+  // ---- Borrar o marcar como hecho por voz ----
+  // Busca lo que se ha dicho entre lo apuntado aunque no se diga igual («la leche» → «Leche entera»)
+  const ARTIC = /^(?:(?:el|la|los|las|un|una|unos|unas)\s+)+/;
+  const clave = (t) => window.VoiceParser.normalize(t)
+    .replace(/[^a-z0-9ñ\s]/g, ' ').replace(/\s+/g, ' ').trim().replace(ARTIC, '')
+    .split(' ').map((w) => (w.length > 3 && w.endsWith('es') ? w.slice(0, -2) : w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w)).join(' ');
+  function buscarCosa(dicho, listaDicha, soloPendientes) {
+    const q = clave(dicho);
+    if (!q) return null;
+    const palabras = q.split(' ');
+    const abierta = getList(currentListId);
+    const donde = listaDicha ? [findList(state.lists, listaDicha)].filter(Boolean) : state.lists;
+    let mejor = null;
+    for (const l of donde) {
+      for (const it of l.items) {
+        if (soloPendientes && it.done) continue;
+        const k = clave(it.text);
+        if (!k) continue;
+        const kp = k.split(' ');
+        const puntos = k === q ? 4
+          : k.startsWith(q + ' ') || q.startsWith(k + ' ') ? 3
+          : palabras.every((w) => kp.includes(w)) ? 2
+          : palabras.every((w) => k.includes(w)) ? 1 : 0;
+        if (!puntos) continue;
+        // A igualdad, mejor lo pendiente, lo de la lista abierta y lo más reciente
+        const extra = (it.done ? 0 : 0.4) + (abierta && l.id === abierta.id ? 0.2 : 0) + (it.createdAt || 0) / 1e15;
+        const total = puntos + extra;
+        if (!mejor || total > mejor.total) mejor = { list: l, item: it, total };
+      }
+    }
+    return mejor;
+  }
+
+  async function quitarPorVoz(result, textoOriginal) {
+    const hechos = [];
+    const noEncontrados = [];
+    snapshot();
+    for (const dicho of result.items) {
+      const r = buscarCosa(dicho, result.list, result.type === 'done');
+      if (!r) { noEncontrados.push(dicho); continue; }
+      if (result.type === 'delete') r.list.items = r.list.items.filter((i) => i.id !== r.item.id);
+      else marcarHecha(r.item, true);
+      hechos.push(r);
+    }
+    if (hechos.length) {
+      save(); render();
+      const que = hechos.length === 1 ? `«${hechos[0].item.text}»` : `${hechos.length} cosas`;
+      const donde = new Set(hechos.map((h) => h.list.name)).size === 1 ? ` de ${hechos[0].list.emoji} ${hechos[0].list.name}` : '';
+      const falta = noEncontrados.length ? ` · No encuentro «${noEncontrados.join('», «')}»` : '';
+      toast(result.type === 'delete' ? `🗑️ Borrado ${que}${donde}${falta}` : `✅ Hecho ${que}${donde}${falta}`, true);
+      return;
+    }
+    undoSnapshot = null;
+    // No hay nada parecido: quizá era algo para apuntar («quitar el polvo»)
+    const lista = result.list ? ` en ${result.list}` : '';
+    if (await ask(`No encuentro «${noEncontrados.join('», «')}»${lista}. ¿Lo apunto como algo nuevo?`, null, 'Apuntarlo')) {
+      const destino = getList(currentListId) || inbox();
+      snapshot();
+      const t = textoOriginal.trim();
+      addItems(destino, [t.charAt(0).toUpperCase() + t.slice(1)]);
+      save(); render();
+      toast(`${destino.emoji} Apuntado en ${destino.name}`, true);
+    }
+  }
+
   function handleInput(text) {
     const result = parse(text, state.lists);
     if (!result) return;
+    if (result.type === 'delete' || result.type === 'done') { quitarPorVoz(result, text); return; }
     snapshot();
 
     // Si estás dentro de una lista y no nombras otra, va a la lista que tienes abierta
@@ -541,7 +607,7 @@
     const isConfirm = value === null;
     $('askTitle').textContent = title;
     $('askOk').textContent = okLabel;
-    $('askOk').classList.toggle('danger-btn', isConfirm);
+    $('askOk').classList.toggle('danger-btn', isConfirm && okLabel !== 'Apuntarlo');
     input.hidden = isConfirm;
     input.value = value || '';
     return new Promise((resolve) => {
