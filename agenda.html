@@ -503,7 +503,7 @@ async function iniciarSync(){
 const yo = () => { const N = window.DiloNube; return N && N.usuario ? N.usuario.correo : ''; };
 function persona(correo){
   const N = window.DiloNube;
-  return (N && N.persona && N.compartida && correo) ? N.persona(correo) : null;
+  return (N && N.persona && correo) ? N.persona(correo) : null;
 }
 function cuando(ts){
   if (!ts) return '';
@@ -1446,6 +1446,6 @@ if ('serviceWorker' in navigator){
 }
 })();
 </script>
-<script type="module" src="js/nube.js?v=0.8"></script>
+<script type="module" src="js/nube.js?v=0.8.1"></script>
 </body>
 </html>

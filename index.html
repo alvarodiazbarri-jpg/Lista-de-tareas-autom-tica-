@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#EEF1F4" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#11161C" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#E6EBF1" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1B222B" media="(prefers-color-scheme: dark)">
   <meta name="description" content="Apunta tareas, compras e ideas con la voz en cuanto se te ocurran.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Dilo">
@@ -15,14 +15,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
-  <link rel="stylesheet" href="styles.css?v=0.8">
+  <link rel="stylesheet" href="styles.css?v=0.8.1">
 </head>
 <body>
   <!-- Cabecera de inicio -->
   <header class="home-head" id="homeHead">
+    <span class="hh-logo" aria-hidden="true">🎙️</span>
     <div class="hh-text">
+      <h1 class="hh-title">Dilo</h1>
       <p class="hh-date" id="hoyFecha"></p>
-      <h1 class="hh-hello" id="saludo">Hola</h1>
     </div>
     <button id="cloudChip" class="avatar-btn" type="button" aria-label="Nube y familia">☁️</button>
     <button id="helpBtn" class="round-btn" type="button" aria-label="Ayuda">?</button>
@@ -98,7 +99,6 @@
   <!-- Barra inferior: elegir lista, voz y texto -->
   <footer class="dock">
     <div id="live" class="live" aria-live="polite"></div>
-    <div id="chips" class="chips" role="group" aria-label="Apuntar en"></div>
     <form id="textForm" class="composer" autocomplete="off">
       <input id="textInput" type="text" placeholder="Escribe o pulsa el micro…" enterkeyhint="send" aria-label="Qué quieres apuntar">
       <button id="sendBtn" class="send-btn" type="submit" aria-label="Apuntar" hidden>
@@ -176,8 +176,8 @@
     </form>
   </dialog>
 
-  <script src="js/parser.js?v=0.8"></script>
-  <script src="js/app.js?v=0.8"></script>
-  <script type="module" src="js/nube.js?v=0.8"></script>
+  <script src="js/parser.js?v=0.8.1"></script>
+  <script src="js/app.js?v=0.8.1"></script>
+  <script type="module" src="js/nube.js?v=0.8.1"></script>
 </body>
 </html>
