@@ -585,6 +585,7 @@ dialog li { margin-bottom: 6px; }
       <li><b>«Crea una lista de viajes y apunta pasaporte y maleta»</b> o <b>«Crea una lista de viajes con pasaporte»</b> — crea la lista y apunta a la vez</li>
       <li>Si estás <b>dentro de una lista</b> y no nombras otra, se apunta en esa lista.</li>
       <li><b>«Añade una bici a la lista de regalos»</b> — si no existe, la crea</li>
+      <li><b>«Cita con el dentista el martes a las 10 para Julia»</b>, <b>«Apunta en la agenda reunión del colegio el jueves a las 5 de la tarde»</b> — se guarda en <i>Mi agenda</i></li>
       <li><b>«Crea una lista privada de regalos»</b> — una lista que solo ves tú (también en ⋯ de cada lista → «Hacerla privada»)</li>
       <li><b>«Quita la leche de la compra»</b>, <b>«Borra pan»</b>, <b>«Elimina llamar al taller»</b> — borra lo apuntado (con «Deshacer»)</li>
       <li><b>«Tacha el pan»</b> o <b>«Marca la leche como hecha»</b> — lo marca como hecho</li>
@@ -875,12 +876,168 @@ dialog li { margin-bottom: 6px; }
   else global.VoiceParser = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
+  <script>// Entiende citas dichas con la voz y las convierte en una cita de «Mi agenda».
+//   «cita con el dentista el martes a las 10 para Julia»
+//   «apunta en la agenda reunión del colegio el jueves a las 5 de la tarde»
+//   «consulta del pediatra el 15 de diciembre a las 9 y media en el centro de salud»
+// DiloCitas.parse(frase, { familia: [{id, n}], tipos: [{id, n}], hoy: Date })
+//   → null si no es una cita, o { titulo, fecha: 'AAAA-MM-DD' | '', hora: 'HH:MM' | '', lugar, persona, de, cat }
+// Se puede probar con Node: require('./js/citas.js').parse(frase, {...})
+
+(function (global) {
+  // Quita tildes y pasa a minúsculas letra a letra, para que el texto sin tildes y el original
+  // tengan la misma longitud (así lo encontrado en uno se puede recortar del otro)
+  const sinTilde = (s) => [...s].map((c) => c.normalize('NFD').replace(/[̀-ͯ]/g, '').charAt(0) || c).join('').toLowerCase();
+  const may = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const pad = (n) => String(n).padStart(2, '0');
+  const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+  const CLAVE_RE = /\b(?:cita|citas|consulta|revision|reunion|vacuna|analitica|agenda)\b/;
+  const DIAS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const NUM = { una: 1, un: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12 };
+  const NUM_RE = '(\\d{1,2}|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)';
+  const aNum = (x) => (/^\d+$/.test(x) ? +x : NUM[x]);
+
+  // Tipo de cita según las palabras (si existe ese tipo en la agenda)
+  const PISTAS = [
+    ['medica', /\b(?:medic[oa]|doctor[a]?|dentista|pediatra|enfermer[oa]|hospital|centro de salud|ambulatorio|analitica|vacuna|oculista|oftalmologo|dermatolog[oa]|ginecolog[oa]|fisio|fisioterapeuta|revision medica|urgencias|clinica|psicolog[oa]|logopeda|traumatolog[oa]|ojos|vista|dientes|muelas)\b/],
+    ['trabajo', /\b(?:trabajo|oficina|jefe|cliente|reunion de trabajo|entrevista)\b/],
+    ['tramite', /\b(?:banco|notari[ao]|ayuntamiento|dni|pasaporte|itv|hacienda|gestoria|seguro|registro|abogad[oa]|tramite|juzgado|correos)\b/],
+  ];
+
+  function parse(frase, opciones = {}) {
+    const familia = opciones.familia || [];
+    const tipos = opciones.tipos || [];
+    const hoy = opciones.hoy ? new Date(opciones.hoy) : new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    let orig = frase.replace(/[!?¡¿;]/g, '').replace(/\s+/g, ' ').trim();
+    let t = sinTilde(orig);
+    if (!CLAVE_RE.test(t)) return null;
+    // «añade leche a la lista» no es una cita aunque diga «agenda» en otro sentido: exigimos
+    // la palabra clave al principio o «en la agenda»
+    const quitar = (re) => {
+      const m = t.match(re);
+      if (!m) return null;
+      orig = (orig.slice(0, m.index) + ' ' + orig.slice(m.index + m[0].length)).replace(/\s+/g, ' ').trim();
+      t = sinTilde(orig);
+      return m;
+    };
+
+    // Arranque: «oye», «apunta», «en la agenda», «que tengo», «una»…
+    quitar(/^(?:(?:oye|vale|dilo|por favor|hola)\s+)+/);
+    quitar(/\s*\b(?:en|a|para) (?:la|mi) agenda\b/);
+    quitar(/^(?:(?:apuntame|apunta|anademe|anade|agrega|ponme|pon|guarda|guardame|crea|creame|agenda|recuerdame|anota|anotame)\s+)?(?:que\s+)?(?:(?:tengo|tenemos|tiene)\s+)?(?:(?:una|un|la|el)\s+)?/);
+    if (!/^(?:cita|citas|consulta|revision|reunion|vacuna|analitica)\b/.test(t)) return null;
+
+    // Hora: «a las 10», «a las 10:30», «a las 10 y media», «a las 5 de la tarde», «a mediodía»
+    let hora = '';
+    let m = quitar(new RegExp('\\b(?:a|sobre|para|hacia)\\s+(?:las|la)\\s+' + NUM_RE + '(?:(?:[:.h]|\\s+y\\s+)(\\d{2})|\\s+y\\s+(media|cuarto)|\\s+menos\\s+(cuarto))?(?:\\s*(?:h|horas))?(?:\\s+(?:de la|por la)\\s+(manana|tarde|noche)|\\s+(?:del|al)\\s+(mediodia))?\\b'));
+    if (m) {
+      let h = aNum(m[1]);
+      let min = m[2] ? +m[2] : m[3] === 'media' ? 30 : m[3] === 'cuarto' ? 15 : 0;
+      if (m[4]) { h -= 1; min = 45; }
+      const parte = m[5] || (m[6] ? 'tarde' : '');
+      if ((parte === 'tarde' || parte === 'noche') && h < 12) h += 12;
+      else if (!parte && h >= 1 && h <= 7) h += 12;    // «a las 5» suele ser por la tarde
+      if (h === 24) h = 0;
+      if (h >= 0 && h < 24 && min < 60) hora = `${pad(h)}:${pad(min)}`;
+    } else if ((m = quitar(/\b(?:a|al)\s+mediodia\b/))) hora = '12:00';
+    else if ((m = quitar(/\b(\d{1,2})[:.](\d{2})\b/))) hora = `${pad(+m[1])}:${m[2]}`;
+
+    // Fecha
+    let fecha = '';
+    const dentroDe = (dias) => { const d = new Date(hoy); d.setDate(d.getDate() + dias); return iso(d); };
+    if ((m = quitar(/\bpasado\s+manana\b/))) fecha = dentroDe(2);
+    else if ((m = quitar(/\b(?:para\s+)?(?:hoy|esta tarde|esta noche|esta manana)\b/))) fecha = dentroDe(0);
+    else if ((m = quitar(/\b(?:para\s+)?manana\b/))) fecha = dentroDe(1);
+    else if ((m = quitar(new RegExp('\\bdentro de\\s+' + NUM_RE + '\\s+(dias?|semanas?)\\b')))) fecha = dentroDe(aNum(m[1]) * (m[2].startsWith('semana') ? 7 : 1));
+    if (!fecha && (m = quitar(new RegExp('\\b(?:(?:el|este|el proximo|el siguiente|para el)\\s+)?(' + DIAS.join('|') + ')(?:\\s+(?:que viene|proximo))?(?:\\s+(?:dia\\s+)?(\\d{1,2}))?\\b')))) {
+      if (m[2]) {
+        fecha = diaDelMes(+m[2]);
+      } else {
+        const wd = DIAS.indexOf(m[1]);
+        let suma = (wd - hoy.getDay() + 7) % 7;
+        if (suma === 0 && !/^este/.test(m[0])) suma = 7;
+        fecha = dentroDe(suma);
+      }
+    }
+    if (!fecha && (m = quitar(new RegExp('\\b(?:(?:el|para el)\\s+)?(?:dia\\s+)?(\\d{1,2})\\s+de\\s+(' + MESES.join('|') + ')(?:\\s+de(?:l)?\\s+(\\d{4}))?\\b')))) {
+      fecha = fechaDe(+m[1], MESES.indexOf(m[2]), m[3] ? +m[3] : null);
+    }
+    if (!fecha && (m = quitar(/\b(?:el\s+)?(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/))) {
+      fecha = fechaDe(+m[1], +m[2] - 1, m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : null);
+    }
+    if (!fecha && (m = quitar(/\b(?:el|para el)\s+(?:dia\s+)?(\d{1,2})\b/))) fecha = diaDelMes(+m[1]);
+
+    function fechaDe(d, mes, anio) {
+      if (d < 1 || d > 31 || mes < 0 || mes > 11) return '';
+      let f = new Date(anio || hoy.getFullYear(), mes, d);
+      if (!anio && f < hoy) f = new Date(hoy.getFullYear() + 1, mes, d);
+      return iso(f);
+    }
+    function diaDelMes(d) {
+      if (d < 1 || d > 31) return '';
+      let f = new Date(hoy.getFullYear(), hoy.getMonth(), d);
+      if (f < hoy) f = new Date(hoy.getFullYear(), hoy.getMonth() + 1, d);
+      return iso(f);
+    }
+
+    // De quién es: «para Julia», «de Julia», «para toda la familia»
+    let de = '';
+    if (quitar(/\b(?:para|de|con)\s+(?:toda la familia|la familia|todos)\b/)) de = 'familia';
+    if (!de) {
+      for (const p of familia) {
+        const n = sinTilde(p.n || '').trim();
+        if (!n) continue;
+        const re = new RegExp('\\b(?:para|de|del|a)\\s+(?:el|la|mi)?\\s*' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b');
+        if (quitar(re)) { de = p.id; break; }
+      }
+    }
+
+    // Lo que queda: «cita con el dentista en la clínica Sonrisas»
+    let titulo = orig.trim();
+    let lugar = '';
+    let persona = '';
+    const clave = sinTilde(titulo).match(/^(cita|citas|consulta|revision|reunion|vacuna|analitica)\b\s*/);
+    const palabra = clave ? clave[1] : '';
+    if (/^(?:cita|citas|consulta)$/.test(palabra)) titulo = titulo.slice(clave[0].length);
+    // «cita en el banco» → el título es el sitio
+    let tt = sinTilde(titulo);
+    const enIni = tt.match(/^(?:en|al|a)\s+(?:(?:el|la|los|las)\s+)?/);
+    if (enIni && /^(?:cita|citas|consulta)$/.test(palabra)) { titulo = titulo.slice(enIni[0].length); tt = sinTilde(titulo); }
+    else {
+      const en = tt.match(/\s(?:en|al)\s+(?:(?:el|la|los|las)\s+)?/);
+      if (en) { lugar = titulo.slice(en.index + en[0].length).trim(); titulo = titulo.slice(0, en.index); tt = sinTilde(titulo); }
+    }
+    // «cita con el dentista» → «Dentista»; «revisión con la doctora García» → persona «doctora García»
+    const conIni = tt.match(/^(?:con|del|de|para)\s+(?:(?:el|la|los|las)\s+)?/);
+    if (conIni && /^(?:cita|citas|consulta)$/.test(palabra)) { titulo = titulo.slice(conIni[0].length); tt = sinTilde(titulo); }
+    const con = tt.match(/\scon\s+(?:(?:el|la)\s+)?/);
+    if (con) { persona = titulo.slice(con.index + con[0].length).trim(); titulo = titulo.slice(0, con.index); }
+    titulo = titulo.replace(/^(?:de|del|el|la)\s+/i, '').trim();
+    if (!titulo) titulo = persona || lugar || may(palabra || 'cita');
+
+    let cat = '';
+    const todo = sinTilde([frase].join(' '));
+    for (const [id, re] of PISTAS) if (re.test(todo) && (!tipos.length || tipos.some((x) => x.id === id))) { cat = id; break; }
+    if (!cat) cat = tipos.some((x) => x.id === 'personal') ? 'personal' : (tipos[0] ? tipos[0].id : 'personal');
+
+    return { titulo: may(titulo.trim()), fecha, hora, lugar: may(lugar), persona: may(persona), de, cat };
+  }
+
+  const api = { parse };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else global.DiloCitas = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
   <script>(function () {
   'use strict';
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.14';
+  const VERSION = '0.15';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -973,14 +1130,29 @@ dialog li { margin-bottom: 6px; }
     return Object.keys(o).length ? o : null;
   }
 
+  // Cada lista guarda su puesto («orden») y lo conserva aunque pase un tiempo siendo privada:
+  // así vuelve a su sitio y todos los móviles ordenan igual (antes se numeraban según las que
+  // veía cada móvil, y al esconder una privada se descolocaban las demás).
+  function ponerOrden() {
+    const conOrden = state.lists.filter((l) => typeof l.orden === 'number');
+    let max = conOrden.length ? Math.max(...conOrden.map((l) => l.orden)) : -1;
+    let min = conOrden.length ? Math.min(...conOrden.map((l) => l.orden)) : 0;
+    for (const l of state.lists) {
+      if (typeof l.orden === 'number') continue;
+      l.orden = l.name === INBOX_NAME ? --min : ++max;
+    }
+  }
+  const porOrden = (a, b) => (a.orden ?? 0) - (b.orden ?? 0) || (a.id < b.id ? -1 : 1);
+
   function docsLocales(fuente) {
     const mias = fuente === 'mia';
+    ponerOrden();
     const listas = [];
     const items = [];
     const detalles = [];
     state.lists.forEach((l, i) => {
       if (!!l.privada !== mias) return;
-      listas.push({ id: l.id, data: { ...(l.otros || {}), name: l.name, emoji: l.emoji || emojiFor(l.name), orden: i } });
+      listas.push({ id: l.id, data: { ...(l.otros || {}), name: l.name, emoji: l.emoji || emojiFor(l.name), orden: l.orden ?? i } });
       for (const it of l.items) {
         const d = { ...(it.otros || {}), listId: l.id, text: it.text, done: !!it.done, createdAt: it.createdAt || 0 };
         if (it.audioId) d.audioId = it.audioId;
@@ -1044,8 +1216,7 @@ dialog li { margin-bottom: 6px; }
         lists.push(l);
       }
     }
-    lists.sort((a, b) => a.orden - b.orden);
-    lists.forEach((l) => delete l.orden);
+    lists.sort(porOrden);
     const porId = new Map(lists.map((l) => [l.id, l]));
     const vistos = new Set();
     for (const fuente of FUENTES) {
@@ -1091,10 +1262,11 @@ dialog li { margin-bottom: 6px; }
       if (!local) continue;
       const i = nube.lists.findIndex((x) => x.id === id);
       if (i >= 0) nube.lists[i] = local;
-      else nube.lists.splice(Math.min(state.lists.indexOf(local), nube.lists.length), 0, local);
+      else nube.lists.push(local);
       const suyos = new Set(local.items.map((x) => x.id));
       for (const l of nube.lists) if (l !== local) l.items = l.items.filter((x) => !suyos.has(x.id));
     }
+    nube.lists.sort(porOrden);
   }
   const enCamino = new Map();   // id de lista → hasta cuándo se protege
 
@@ -1187,6 +1359,7 @@ dialog li { margin-bottom: 6px; }
     if (!list) {
       list = { id: uid(), name, emoji: emojiFor(name), items: [] };
       state.lists.push(list);
+      ponerOrden();
     }
     return list;
   }
@@ -1316,7 +1489,70 @@ dialog li { margin-bottom: 6px; }
     }
   }
 
+  // ---- Citas por voz → «Mi agenda» ----
+  // «cita con el dentista el martes a las 10 para Julia»: se guarda como en agenda.html
+  // (en la nube de la casa, en «citas», o en este móvil si no hay nube)
+  function datosAgenda() {
+    const lee = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+    const familia = lee('agenda:m2') || lee('agenda:miembros') || [];
+    const aj = lee('agenda:aj') || {};
+    const tipos = Array.isArray(aj.tipos) && aj.tipos.length ? aj.tipos
+      : [{ id: 'medica', n: 'Médica' }, { id: 'trabajo', n: 'Trabajo' }, { id: 'tramite', n: 'Trámite' }, { id: 'personal', n: 'Personal' }, { id: 'otra', n: 'Otra' }];
+    return { familia, tipos, aj };
+  }
+  const CLAVE_CITAS = () => {
+    const N = window.DiloNube;
+    if (N && N.estado === 'dentro') return 'agenda:c2';
+    try { return localStorage.getItem('agenda:c2') ? 'agenda:c2' : 'agenda:v1'; } catch (e) { return 'agenda:v1'; }
+  };
+  function citasLocales(clave) { try { return JSON.parse(localStorage.getItem(clave)) || []; } catch (e) { return []; } }
+
+  async function guardarCita(c) {
+    if (!c.fecha) {
+      toast(`📅 Para apuntar «${c.titulo}» en la agenda dime también el día (por ejemplo, «el martes a las 10»)`);
+      return;
+    }
+    const { familia, aj } = datosAgenda();
+    const cita = {
+      id: uid(), titulo: c.titulo, cat: c.cat, fecha: c.fecha, hora: c.hora, lugar: c.lugar, persona: c.persona,
+      notas: '', aviso: c.fecha < hoyISO() ? 'none' : '1d', de: c.de, fotos: [], creada: Date.now(),
+    };
+    if (yoCorreo()) cita.por = yoCorreo();
+    const clave = CLAVE_CITAS();
+    const lista = citasLocales(clave);
+    lista.push(cita);
+    try { localStorage.setItem(clave, JSON.stringify(lista)); } catch (e) {}
+    const N = window.DiloNube;
+    const base = N && N.estado === 'dentro' ? N.db() : null;
+    if (base) base.collection('citas').doc(cita.id).set(JSON.parse(JSON.stringify(cita))).catch(fallaNube);
+    render();
+    // Aviso: «📅 Dentista · mar 17 nov · 10:00 · Julia»
+    const [y, m, d] = cita.fecha.split('-').map(Number);
+    const dia = new Date(y, m - 1, d).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
+    const quien = cita.de === 'familia' ? ((aj.familia && aj.familia.n) || 'Toda la familia') : (familia.find((p) => p.id === cita.de) || {}).n;
+    const resumen = [cita.titulo, dia, cita.hora, cita.lugar, quien].filter(Boolean).join(' · ');
+    toast(`📅 Cita guardada: ${resumen}`, () => {
+      const l = citasLocales(clave).filter((x) => x.id !== cita.id);
+      try { localStorage.setItem(clave, JSON.stringify(l)); } catch (e) {}
+      if (base) base.collection('citas').doc(cita.id).delete().catch(fallaNube);
+      render();
+      toast('Cita borrada');
+    });
+    // Notificación de confirmación (en las citas sí, aunque Dilo esté abierta); al tocarla, se abre la cita
+    if (canNotify() && Notification.permission === 'granted') {
+      try {
+        const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((r) => setTimeout(() => r(null), 3000))]);
+        if (reg) await reg.showNotification('✅ Apuntado en Mi agenda', {
+          body: resumen + '\nToca para revisarlo', icon: 'icons/icon-192.png', badge: 'icons/badge-96.png',
+          tag: 'agenda-' + Date.now(), data: { agenda: true, citaId: cita.id },
+        });
+      } catch (e) { /* sin notificación: queda el aviso en pantalla */ }
+    }
+  }
+
   function handleInput(text) {
+    const cita = window.DiloCitas ? window.DiloCitas.parse(text, datosAgenda()) : null;
+    if (cita) { guardarCita(cita); return; }
     const result = parse(text, state.lists);
     if (!result) return;
     if (result.type === 'delete' || result.type === 'done') { quitarPorVoz(result, text); return; }
@@ -1588,14 +1824,18 @@ dialog li { margin-bottom: 6px; }
 
   // ---------- Toast con deshacer ----------
   let toastTimer;
+  // deshacerOtro: para deshacer algo que no son las listas (p. ej. una cita guardada por voz)
+  let deshacerOtro = null;
   function toast(msg, undoable = false) {
     $('toastMsg').textContent = msg;
-    $('toastUndo').hidden = !undoable || !undoSnapshot;
+    if (typeof undoable === 'function') { deshacerOtro = undoable; undoable = true; } else deshacerOtro = null;
+    $('toastUndo').hidden = !undoable || (!undoSnapshot && !deshacerOtro);
     $('toast').hidden = false;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { $('toast').hidden = true; }, 4000);
   }
   $('toastUndo').addEventListener('click', () => {
+    if (deshacerOtro) { const f = deshacerOtro; deshacerOtro = null; f(); $('toast').hidden = true; return; }
     if (!undoSnapshot) return;
     state = JSON.parse(undoSnapshot);
     undoSnapshot = null;
@@ -2295,4 +2535,4 @@ dialog li { margin-bottom: 6px; }
   }, 60000);
 })();
 </script>
-  <script type="module" src="js/nube.js?v=0.14"></script>
+  <script type="module" src="js/nube.js?v=0.15"></script>

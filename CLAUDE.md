@@ -24,6 +24,8 @@ compartir la lista») y la pegue en el chat, y pasa lo nuevo a `PENDIENTES.md`.
 - `index.html` + `styles.css` + `js/app.js`: listas, voz, notificaciones, nube de las listas, diseño.
 - `js/parser.js`: entiende las frases en español («añade X a la compra», «crea una lista de viajes y apunta
   pasaporte», «apunta en tareas X»…). Probar con Node: `require('./js/parser.js').parse(frase, listas)`.
+- `js/citas.js`: entiende citas dichas con la voz («cita con el dentista el martes a las 10 para Julia») y
+  `app.js` las guarda en Mi agenda. Probar con Node: `require('./js/citas.js').parse(frase, {familia, tipos, hoy})`.
 - `agenda.html`: «Mi agenda» (citas), copia de la versión que tenía como artifact de Claude, con su propio
   CSS y JS dentro. Datos en localStorage `agenda:v1` (sin nube) o `agenda:c2` (con nube).
 - `js/nube.js` (módulo): Firebase (proyecto `dilo-2dfb7`): entrar con Google, «casa» compartida e
