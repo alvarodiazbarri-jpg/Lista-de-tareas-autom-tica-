@@ -20,12 +20,16 @@ mande (en la lista: ⋯ → «📋 Copiar o compartir la lista») y pasar aquí 
 8. [x] **Apuntar citas con la voz** *Hecho en la versión 0.15, falta probarlo hablando.*: «cita con el dentista el martes a las 10 para Julia», «apunta en la agenda reunión del colegio el jueves a las 5 de la tarde», «consulta del pediatra el 15 de diciembre a las 9 y media en el centro de salud». Entiende hoy/mañana/pasado mañana, días de la semana, «el 15», «15 de diciembre», «3/12», «dentro de 2 días», horas («y media», «menos cuarto», «de la tarde», «a mediodía»), lugar («en …»), de quién es («para Julia», «para toda la familia») y adivina el tipo (médica, trámite, trabajo). Se guarda en Mi agenda con aviso «Deshacer» y llega la notificación. Si falta el día, lo pide. Lo hace `js/citas.js`.
 9. [ ] *(Aplazado: Álvaro prefiere dejarlo para más adelante.)* **Recetas dentro de Dilo**, igual que se ha hecho con la agenda (copiar «Recetas de Karlos Bernal» y «Comidas de la semana»).
 10. [ ] **Leer citas desde fotos** (lo que hacía «Importar» en la Mi agenda de Claude): buscar otra forma, porque fuera de claude.ai no se puede usar a Claude así.
-11. [ ] **Apuntar con el móvil bloqueado**: un atajo de Android (Tasker o rutina de Google) que dicte la idea y la envíe a la nube; Dilo la recoge en la Bandeja de entrada al abrirse. Necesita el punto 1.
+11. [x] **Apuntar con el móvil bloqueado** *Hecho en la versión 0.16, falta probarlo en el móvil.* Una app web no puede escuchar con el móvil bloqueado (Android solo lo deja al asistente y a las apps del sistema), así que se deja a un toque:
+   - **Botón fijo en las notificaciones** («?» → «📌 Poner un botón Apuntar fijo…»): se ve en la pantalla de bloqueo; al tocarlo y desbloquear, Dilo se abre escuchando. Se vuelve a poner solo al abrir Dilo.
+   - **Compartir → Dilo** desde cualquier app (Keep, WhatsApp, el asistente…): se apunta como si se dijera («añade pilas a la compra» va a Compra). Puede que haya que desinstalar e instalar Dilo para que salga en el menú «Compartir».
+   - Atajo **«Hablar ahora»** (mantener pulsado el icono de Dilo; se puede arrastrar a la pantalla de inicio).
+   - Si se quiere de verdad sin desbloquear: el asistente de Google o Tasker apuntando en Google Keep, y luego compartir a Dilo. Pensarlo si hace falta.
 12. [ ] **Avisos de citas con la app cerrada**: ahora solo saltan con Dilo abierta. Con la nube se pueden mandar notificaciones de verdad (o seguir usando «Añadir al calendario del móvil»).
+13. [ ] **Que Dilo conteste por voz**: al apuntar, borrar o guardar una cita, que lo diga en voz alta («Apuntado leche en la compra», «Cita guardada: dentista, martes a las diez»), sobre todo cuando se usa sin mirar la pantalla. Con un interruptor para activarlo o no. Más adelante, preguntas: «¿qué hay en la compra?», «¿qué citas tengo mañana?».
 
 ## Por revisar
 - [ ] Decidir cómo se ven las listas: **Tarjetas** o **Filas**, y qué colores (Vivos, Pastel, Profundos, Degradados). De momento se puede elegir en «?» para probar.
-- [ ] Probar la voz en el móvil real con la versión 0.5.1 (crear lista y apuntar en la misma frase, apuntar en una lista, notificación).
 - [ ] Listas cuyo nombre lleva «con» (por ejemplo «Cena con amigos»): por voz se entiende como «lista Cena» + «amigos». De momento crearlas con el botón «+ Nueva lista».
 - [ ] «Crea una lista de ferretería tornillos y tacos» (sin «y apunta» o «con») mete todo en el nombre. Pensar si la app puede preguntar en estos casos.
 - [ ] Recuperar las fotos de las citas que se quedaron en la Mi agenda antigua (guardar copia de seguridad desde allí con las fotos y cargarla en Dilo).

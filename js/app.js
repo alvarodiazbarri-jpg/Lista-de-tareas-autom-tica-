@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.15';
+  const VERSION = '0.16';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -236,6 +236,13 @@
   }
   const enCamino = new Map();   // id de lista → hasta cuándo se protege
 
+  // Para hacer algo cuando ya están las listas (de la nube, si se usa): p. ej. apuntar lo compartido
+  let listoYa = false;
+  const alListo = [];
+  function cuandoListo(fn) { if (listoYa) fn(); else alListo.push(fn); }
+  function marcarListo() { if (listoYa) return; listoYa = true; alListo.splice(0).forEach((f) => { try { f(); } catch (e) { console.error(e); } }); }
+  setTimeout(marcarListo, 6000);
+
   const claveMigrada = () => 'dilo:nube:' + nubeDB.hogarId;
 
   // Primera vez en este móvil: juntar lo que había aquí con lo que hay en la nube.
@@ -269,6 +276,7 @@
     save();      // sube lo que faltaba
     render();
     if (nuevas) toast(`☁️ ${nuevas} ${nuevas === 1 ? 'cosa apuntada pasada' : 'cosas apuntadas pasadas'} a la nube`);
+    marcarListo();
   }
 
   function alCambiarLaNube() {
@@ -283,6 +291,7 @@
     pushCloud();   // por si hubo que crear la bandeja
     if (currentListId && !getList(currentListId)) currentListId = null;
     render();
+    marcarListo();
   }
 
   function conectarListas(base, baseMia) {
@@ -1456,6 +1465,7 @@
     let hogarActual = null;
     N.onChange(() => {
       const id = N.estado === 'dentro' && N.hogar ? N.hogar.id : null;
+      if (N.estado === 'fuera' || N.estado === 'sin-casa') marcarListo();
       if (id !== hogarActual) { hogarActual = id; conectarListas(id ? N.db() : null, id && N.dbMia ? N.dbMia() : null); }
       renderCloud();
     });
@@ -1472,12 +1482,67 @@
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', (e) => {
       if (e.data && e.data.openList) openList(e.data.openList);
+      if (e.data && e.data.voz && !listening) micBtn.click();
     });
   }
 
   if (params.has('voz')) {
     setTimeout(() => micBtn.click(), 300);
   }
+
+  // «Compartir» → Dilo desde otra app (Keep, WhatsApp, el asistente…): se apunta como si se dijera.
+  // Esperamos a tener las listas de la nube para no pisar nada.
+  // El texto manda; el título solo si no hay texto; el enlace se añade si no venía ya dentro
+  const tx = (params.get('texto') || '').trim();
+  const en = (params.get('enlace') || '').trim();
+  const compartido = [tx || (params.get('titulo') || '').trim(), en && !tx.includes(en) ? en : ''].filter(Boolean).join(' ');
+  // Se guarda un momento en el móvil por si Dilo se recarga al abrirse (versión nueva)
+  if (compartido) {
+    try { sessionStorage.setItem('dilo:compartido', compartido); } catch (e) {}
+    history.replaceState(null, '', location.pathname);
+  }
+  let pendiente = compartido;
+  try { pendiente = sessionStorage.getItem('dilo:compartido') || compartido; } catch (e) {}
+  if (pendiente) {
+    cuandoListo(() => {
+      try { sessionStorage.removeItem('dilo:compartido'); } catch (e) {}
+      handleInput(pendiente);
+    });
+  }
+
+  // Botón fijo «Toca para apuntar» en las notificaciones (opciones iguales que en sw.js)
+  const FIJO_KEY = 'dilo:fijo';
+  const fijoActivo = () => { try { return localStorage.getItem(FIJO_KEY) === '1'; } catch (e) { return false; } };
+  async function ponerFijo(on) {
+    try { localStorage.setItem(FIJO_KEY, on ? '1' : '0'); } catch (e) {}
+    if (!canNotify()) return;
+    const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((r) => setTimeout(() => r(null), 3000))]);
+    if (!reg) return;
+    if (!on) { (await reg.getNotifications({ tag: 'dilo-fijo' })).forEach((n) => n.close()); return; }
+    if (Notification.permission === 'default') await Notification.requestPermission();
+    if (Notification.permission !== 'granted') { toast('Para el botón fijo hay que permitir las notificaciones de Dilo'); return; }
+    await reg.showNotification('🎙️ Dilo · Toca para apuntar', {
+      body: 'Habla y se apunta en tus listas o en Mi agenda',
+      icon: 'icons/icon-192.png', badge: 'icons/badge-96.png', tag: 'dilo-fijo',
+      requireInteraction: true, silent: true, renotify: false,
+      actions: [{ action: 'voz', title: '🎙️ Apuntar' }],
+      data: { voz: true },
+    });
+  }
+  function renderFijo() {
+    const b = $('fijoBtn');
+    b.hidden = !canNotify();
+    b.textContent = fijoActivo() ? '📌 Botón «Apuntar» en las notificaciones: activado (toca para quitarlo)'
+      : '📌 Poner un botón «Apuntar» fijo en las notificaciones';
+  }
+  $('fijoBtn').addEventListener('click', async () => {
+    await ponerFijo(!fijoActivo());
+    renderFijo();
+    toast(fijoActivo() ? '📌 Listo: en las notificaciones tienes «Toca para apuntar»' : 'Botón fijo quitado');
+  });
+  renderFijo();
+  // Si estaba activado, se vuelve a poner al abrir Dilo (por si se quitó al reiniciar el móvil)
+  if (fijoActivo() && canNotify() && Notification.permission === 'granted') ponerFijo(true);
 
   if ('serviceWorker' in navigator) {
     // Busca siempre la versión nueva del service worker y recarga una vez cuando llega
