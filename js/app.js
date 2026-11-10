@@ -3,6 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
+  const VERSION = '0.3';
   const $ = (id) => document.getElementById(id);
 
   // ---------- Datos ----------
@@ -144,6 +145,7 @@
 
   // ---------- Voz ----------
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const IS_ANDROID = /Android/i.test(navigator.userAgent);
   const micBtn = $('micBtn');
   const live = $('live');
   let recognition = null;
@@ -164,13 +166,26 @@
     recognition.interimResults = true;
     // En Android, el modo continuo repite lo ya dicho en cada resultado.
     // Allí escuchamos una sola frase (se para sola al dejar de hablar).
-    recognition.continuous = !/Android/i.test(navigator.userAgent);
+    recognition.continuous = !IS_ANDROID;
     recognition.maxAlternatives = 1;
     finalText = '';
     let lastInterim = '';
     let failedOver = false;
 
     recognition.onresult = (e) => {
+      // En Android cada resultado puede traer la frase entera otra vez:
+      // nos quedamos solo con el más largo y no los sumamos.
+      if (IS_ANDROID) {
+        let best = '';
+        for (let i = 0; i < e.results.length; i++) {
+          const t = e.results[i][0].transcript.trim();
+          if (t.length > best.length) best = t;
+        }
+        finalText = best;
+        lastInterim = '';
+        live.textContent = best || 'Escuchando…';
+        return;
+      }
       let text = '';
       lastInterim = '';
       for (let i = 0; i < e.results.length; i++) {
@@ -440,6 +455,7 @@
   // ---------- Acciones de lista ----------
   $('backBtn').addEventListener('click', () => { currentListId = null; render(); });
   $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
+  $('version').textContent = 'Versión ' + VERSION;
 
   $('newListBtn').addEventListener('click', async () => {
     const name = await ask('Nombre de la nueva lista');
