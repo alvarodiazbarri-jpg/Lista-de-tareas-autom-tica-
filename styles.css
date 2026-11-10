@@ -94,10 +94,7 @@ main, .home-head, .list-head {
   display: flex; align-items: center; gap: 10px;
   padding-top: calc(env(safe-area-inset-top, 0px) + 12px); padding-bottom: 2px;
 }
-.hh-logo {
-  flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
-  background: var(--voice); font-size: 1.2rem; box-shadow: var(--shadow);
-}
+.hh-logo { flex: none; width: 42px; height: 42px; border-radius: 11px; box-shadow: var(--shadow); }
 .hh-text { flex: 1; min-width: 0; }
 .firma {
   display: inline-block; vertical-align: 4px; margin-left: 6px; padding: 2px 8px; border-radius: 8px;

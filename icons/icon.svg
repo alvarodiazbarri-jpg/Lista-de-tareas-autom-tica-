@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#4f46e5"/>
-  <g fill="#fff" transform="translate(96 96) scale(13.33)">
-    <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/>
-  </g>
+  <!-- Icono de Dilo · APP by BARRI: libreta con micro y el nombre DILOBARRI -->
+  <rect width="512" height="512" rx="112" fill="#1B222B"/>
+  <rect x="128" y="78" width="256" height="250" rx="34" fill="#2B3644"/>
+  <g stroke="#4CC487" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M168 136l18 18 30-34"/><path d="M168 206l18 18 30-34"/></g>
+  <g stroke="#5D6C7D" stroke-width="18" stroke-linecap="round"><path d="M248 140h96"/><path d="M248 210h96"/><path d="M248 280h56"/></g>
+  <circle cx="196" cy="278" r="30" fill="#E4572E"/><rect x="188" y="258" width="16" height="28" rx="8" fill="#fff"/><path d="M180 278a16 16 0 0 0 32 0M196 294v8" stroke="#fff" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <text x="256" y="432" text-anchor="middle" font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="64" letter-spacing="1"><tspan fill="#FFFFFF">DILO</tspan><tspan fill="#FF7A55">BARRI</tspan></text>
 </svg>

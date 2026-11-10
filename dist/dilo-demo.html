@@ -97,10 +97,7 @@ main, .home-head, .list-head {
   display: flex; align-items: center; gap: 10px;
   padding-top: calc(env(safe-area-inset-top, 0px) + 12px); padding-bottom: 2px;
 }
-.hh-logo {
-  flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
-  background: var(--voice); font-size: 1.2rem; box-shadow: var(--shadow);
-}
+.hh-logo { flex: none; width: 42px; height: 42px; border-radius: 11px; box-shadow: var(--shadow); }
 .hh-text { flex: 1; min-width: 0; }
 .firma {
   display: inline-block; vertical-align: 4px; margin-left: 6px; padding: 2px 8px; border-radius: 8px;
@@ -461,7 +458,7 @@ dialog li { margin-bottom: 6px; }
 
   <!-- Cabecera de inicio -->
   <header class="home-head" id="homeHead">
-    <span class="hh-logo" aria-hidden="true">🎙️</span>
+    <img class="hh-logo" src="icons/icon.svg" alt="" aria-hidden="true">
     <div class="hh-text">
       <h1 class="hh-title">Dilo <span class="firma">APP by BARRI</span></h1>
       <p class="hh-date" id="hoyFecha"></p>
@@ -566,6 +563,8 @@ dialog li { margin-bottom: 6px; }
       <li><b>«Crea una lista de viajes y apunta pasaporte y maleta»</b> o <b>«Crea una lista de viajes con pasaporte»</b> — crea la lista y apunta a la vez</li>
       <li>Si estás <b>dentro de una lista</b> y no nombras otra, se apunta en esa lista.</li>
       <li><b>«Añade una bici a la lista de regalos»</b> — si no existe, la crea</li>
+      <li><b>«Quita la leche de la compra»</b>, <b>«Borra pan»</b>, <b>«Elimina llamar al taller»</b> — borra lo apuntado (con «Deshacer»)</li>
+      <li><b>«Tacha el pan»</b> o <b>«Marca la leche como hecha»</b> — lo marca como hecho</li>
       <li><b>Cualquier otra cosa</b> se guarda en la <i>Bandeja de entrada</i> para organizarla luego.</li>
     </ul>
     <p>Si no hay conexión o el navegador no reconoce la voz, se graba el audio y lo encontrarás en la Bandeja de entrada.</p>
@@ -625,7 +624,7 @@ dialog li { margin-bottom: 6px; }
 
   <script>window.DILO_DEMO = true;
 // Interpreta lo que dices y decide qué hacer con ello.
-// Devuelve { type: 'create' | 'add' | 'inbox', list?, items? }
+// Devuelve { type: 'create' | 'add' | 'inbox' | 'delete' | 'done', list?, items? }
 
 (function (global) {
   const INBOX_NAME = 'Bandeja de entrada';
@@ -685,6 +684,46 @@ dialog li { margin-bottom: 6px; }
   const TRAIL_RE = /\s+(?:por favor|gracias)$/;
   const NAME_LEAD_RE = /^(?:(?:una|un|la|el|nueva|nuevo|que se llame|llamada|llamado|con el nombre de|con el nombre|de nombre|de|para|sobre)\s+)+/;
 
+  // Borrar o marcar como hecho: «quita la leche de la compra», «borra pan», «tacha el pan»,
+  // «marca la leche como hecha». La lista es opcional y solo cuenta si existe.
+  const DEL_RE = /^(?:quita|quitar|quitame|borra|borrar|borrame|elimina|eliminar|eliminame|saca|sacar|sacame|suprime|suprimir)\s+/;
+  const DONE_RE = /^(?:tacha|tachar|tachame|marca|marcar|marcame)\s+/;
+  const DONE_TAIL_RE = /\s+(?:como\s+)?(?:hech[oa]s?|terminad[oa]s?|completad[oa]s?|comprad[oa]s?)$/;
+  const ARTICULOS_RE = /^(?:(?:el|la|los|las|un|una|unos|unas|lo de|eso de)\s+)+/;
+
+  function parseQuitar(text, orig, lists) {
+    let type = null;
+    let m = text.match(DEL_RE);
+    if (m) type = 'delete';
+    else if ((m = text.match(DONE_RE))) type = 'done';
+    if (!type) return null;
+    let body = text.slice(m[0].length);
+    let bodyOrig = orig.slice(m[0].length);
+    // «marca la leche como hecha»: quitamos «como hecha»
+    const t = body.match(DONE_TAIL_RE);
+    if (t) { body = body.slice(0, t.index); bodyOrig = bodyOrig.slice(0, t.index); }
+    // «marca como hecho el pan»
+    const h = body.match(/^como\s+(?:hech[oa]s?|terminad[oa]s?|completad[oa]s?)\s+/);
+    if (h) { body = body.slice(h[0].length); bodyOrig = bodyOrig.slice(h[0].length); }
+    // La lista, si se dice: «... de la compra», «... en tareas», «... de la lista de regalos»
+    let list = null;
+    const sepRe = /\s(?:de|del|en|a|al)\s/g;
+    const cuts = [];
+    let sm;
+    while ((sm = sepRe.exec(body))) { cuts.push({ idx: sm.index, len: sm[0].length }); sepRe.lastIndex = sm.index + 1; }
+    // De izquierda a derecha, para que «de la lista de la compra» se quite entero
+    for (let i = 0; i < cuts.length && !list; i++) {
+      const c = cuts[i];
+      const found = findList(lists, bodyOrig.slice(c.idx + c.len));
+      if (found) { list = found.name; body = body.slice(0, c.idx); bodyOrig = bodyOrig.slice(0, c.idx); }
+    }
+    const items = splitItems(bodyOrig)
+      .map((x) => x.replace(new RegExp(ARTICULOS_RE.source, 'i'), '').trim())
+      .filter(Boolean);
+    if (!items.length) return null;
+    return { type, list, items };
+  }
+
   // Si se repite la frase entera ("compra pan compra pan") nos quedamos con una
   function collapseRepeat(str) {
     const w = str.split(' ');
@@ -719,6 +758,10 @@ dialog li { margin-bottom: 6px; }
     m = text.match(TRAIL_RE);
     if (m) cut(0, text.length - m[0].length);
     if (!text) return null;
+
+    // 0) Borrar o marcar como hecho
+    const q = parseQuitar(text, orig, lists);
+    if (q) return q;
 
     // 1) Crear lista: "crea una lista de viajes", "hazme una lista nueva que se llame viajes",
     //    "nueva lista viajes", "añade una lista de regalos"
@@ -811,7 +854,7 @@ dialog li { margin-bottom: 6px; }
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.11';
+  const VERSION = '0.12';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -1110,9 +1153,75 @@ dialog li { margin-bottom: 6px; }
   }
 
   // ---------- Procesar lo dicho/escrito ----------
+  // ---- Borrar o marcar como hecho por voz ----
+  // Busca lo que se ha dicho entre lo apuntado aunque no se diga igual («la leche» → «Leche entera»)
+  const ARTIC = /^(?:(?:el|la|los|las|un|una|unos|unas)\s+)+/;
+  const clave = (t) => window.VoiceParser.normalize(t)
+    .replace(/[^a-z0-9ñ\s]/g, ' ').replace(/\s+/g, ' ').trim().replace(ARTIC, '')
+    .split(' ').map((w) => (w.length > 3 && w.endsWith('es') ? w.slice(0, -2) : w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w)).join(' ');
+  function buscarCosa(dicho, listaDicha, soloPendientes) {
+    const q = clave(dicho);
+    if (!q) return null;
+    const palabras = q.split(' ');
+    const abierta = getList(currentListId);
+    const donde = listaDicha ? [findList(state.lists, listaDicha)].filter(Boolean) : state.lists;
+    let mejor = null;
+    for (const l of donde) {
+      for (const it of l.items) {
+        if (soloPendientes && it.done) continue;
+        const k = clave(it.text);
+        if (!k) continue;
+        const kp = k.split(' ');
+        const puntos = k === q ? 4
+          : k.startsWith(q + ' ') || q.startsWith(k + ' ') ? 3
+          : palabras.every((w) => kp.includes(w)) ? 2
+          : palabras.every((w) => k.includes(w)) ? 1 : 0;
+        if (!puntos) continue;
+        // A igualdad, mejor lo pendiente, lo de la lista abierta y lo más reciente
+        const extra = (it.done ? 0 : 0.4) + (abierta && l.id === abierta.id ? 0.2 : 0) + (it.createdAt || 0) / 1e15;
+        const total = puntos + extra;
+        if (!mejor || total > mejor.total) mejor = { list: l, item: it, total };
+      }
+    }
+    return mejor;
+  }
+
+  async function quitarPorVoz(result, textoOriginal) {
+    const hechos = [];
+    const noEncontrados = [];
+    snapshot();
+    for (const dicho of result.items) {
+      const r = buscarCosa(dicho, result.list, result.type === 'done');
+      if (!r) { noEncontrados.push(dicho); continue; }
+      if (result.type === 'delete') r.list.items = r.list.items.filter((i) => i.id !== r.item.id);
+      else marcarHecha(r.item, true);
+      hechos.push(r);
+    }
+    if (hechos.length) {
+      save(); render();
+      const que = hechos.length === 1 ? `«${hechos[0].item.text}»` : `${hechos.length} cosas`;
+      const donde = new Set(hechos.map((h) => h.list.name)).size === 1 ? ` de ${hechos[0].list.emoji} ${hechos[0].list.name}` : '';
+      const falta = noEncontrados.length ? ` · No encuentro «${noEncontrados.join('», «')}»` : '';
+      toast(result.type === 'delete' ? `🗑️ Borrado ${que}${donde}${falta}` : `✅ Hecho ${que}${donde}${falta}`, true);
+      return;
+    }
+    undoSnapshot = null;
+    // No hay nada parecido: quizá era algo para apuntar («quitar el polvo»)
+    const lista = result.list ? ` en ${result.list}` : '';
+    if (await ask(`No encuentro «${noEncontrados.join('», «')}»${lista}. ¿Lo apunto como algo nuevo?`, null, 'Apuntarlo')) {
+      const destino = getList(currentListId) || inbox();
+      snapshot();
+      const t = textoOriginal.trim();
+      addItems(destino, [t.charAt(0).toUpperCase() + t.slice(1)]);
+      save(); render();
+      toast(`${destino.emoji} Apuntado en ${destino.name}`, true);
+    }
+  }
+
   function handleInput(text) {
     const result = parse(text, state.lists);
     if (!result) return;
+    if (result.type === 'delete' || result.type === 'done') { quitarPorVoz(result, text); return; }
     snapshot();
 
     // Si estás dentro de una lista y no nombras otra, va a la lista que tienes abierta
@@ -1349,7 +1458,7 @@ dialog li { margin-bottom: 6px; }
     const isConfirm = value === null;
     $('askTitle').textContent = title;
     $('askOk').textContent = okLabel;
-    $('askOk').classList.toggle('danger-btn', isConfirm);
+    $('askOk').classList.toggle('danger-btn', isConfirm && okLabel !== 'Apuntarlo');
     input.hidden = isConfirm;
     input.value = value || '';
     return new Promise((resolve) => {
@@ -2020,4 +2129,4 @@ dialog li { margin-bottom: 6px; }
   }, 60000);
 })();
 </script>
-  <script type="module" src="js/nube.js?v=0.11"></script>
+  <script type="module" src="js/nube.js?v=0.12"></script>
