@@ -159,8 +159,16 @@ main, .home-head, .list-head {
 .at-cal b { display: block; font-size: 1.35rem; line-height: 1.2; font-family: var(--font-display); }
 .at-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .at-label { font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
-.at-text b { font-size: 1.05rem; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.at-text span:last-child { color: var(--muted); font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.at-citas { display: grid; gap: 4px; margin-top: 2px; }
+.at-vacia { font-size: 1rem; text-transform: uppercase; }
+.at-hint { color: var(--muted); font-size: .85rem; }
+.at-cita {
+  display: flex; align-items: baseline; gap: 6px; min-width: 0; padding: 4px 9px; border-radius: 8px;
+  font-size: .9rem; text-transform: uppercase;
+}
+.at-cita b { flex: none; }
+.at-cita .at-tit { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.at-cita small { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .75rem; opacity: .9; }
 .at-count {
   flex: none; min-width: 30px; height: 30px; padding: 0 9px; border-radius: 15px;
   display: grid; place-items: center; font-weight: 700; font-size: .9rem;
@@ -178,34 +186,28 @@ main, .home-head, .list-head {
 .tiles-inner { display: contents; }
 .tile {
   --hue: var(--ink);
-  position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 0;
-  padding: 12px; border-radius: 16px; text-align: left;
-  border: 1px solid color-mix(in srgb, var(--hue) 35%, var(--line));
-  background: color-mix(in srgb, var(--hue) 9%, var(--surface)); box-shadow: var(--shadow);
-  overflow: hidden;
-}
-.tile::before {
-  content: ""; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--hue);
+  position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; min-height: 0;
+  padding: 12px; border-radius: 16px; text-align: left; overflow: hidden;
+  border: 0; background: var(--hue); color: #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / .18), inset 0 0 0 1px rgb(255 255 255 / .12);
+  background-image: linear-gradient(160deg, rgb(255 255 255 / .16), transparent 60%);
 }
 .tile:active { transform: scale(.98); }
 .tile-top { display: flex; align-items: center; gap: 8px; }
 .tile-emoji {
-  flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
-  font-size: 1.15rem; background: color-mix(in srgb, var(--hue) 20%, var(--surface));
+  flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+  font-size: 1.2rem; background: rgb(255 255 255 / .22);
 }
 .tile-count {
   margin-left: auto; min-width: 28px; height: 28px; padding: 0 8px; border-radius: 14px;
-  display: grid; place-items: center; font-weight: 700; font-size: .88rem;
-  background: var(--surface-2); color: var(--muted);
+  display: grid; place-items: center; font-weight: 700; font-size: .9rem;
+  background: rgb(0 0 0 / .18); color: #fff;
 }
-.tile-count.has { background: var(--hue); color: #fff; }
+.tile-count.has { background: #fff; color: var(--hue); }
 .tile-name {
-  font-family: var(--font-display); font-weight: 600; font-size: 1.08rem; line-height: 1.15;
-  overflow-wrap: anywhere;
+  font-family: var(--font-display); font-weight: 700; font-size: 1.12rem; line-height: 1.15;
+  overflow-wrap: anywhere; text-shadow: 0 1px 2px rgb(0 0 0 / .2);
 }
-.tile-peek { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: .85rem; }
-.tile-peek li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tile-peek li::before { content: "○ "; opacity: .7; }
 /* Muchas listas: tarjetas pequeñas, solo icono, número y nombre */
 .tiles.mini .tile { padding: 8px 10px 8px 12px; gap: 4px; justify-content: center; }
 .tiles.mini .tile-emoji { width: 28px; height: 28px; font-size: 1rem; border-radius: 8px; }
@@ -217,7 +219,6 @@ main, .home-head, .list-head {
 .tiles.fila .tile-emoji { width: 28px; height: 28px; font-size: 1rem; border-radius: 8px; }
 .tiles.fila .tile-name { order: 1; flex: 1; min-width: 0; font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
 .tiles.fila .tile-count { order: 2; margin-left: 0; min-width: 24px; height: 24px; font-size: .8rem; }
-.tiles.fila .tile::before { width: 4px; }
 .sec-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
 .sec-row .sec-title { margin: 0 2px; }
 .sec-add {
@@ -225,6 +226,12 @@ main, .home-head, .list-head {
   border-radius: 16px; height: 32px; padding: 0 12px; font-size: .88rem; font-weight: 700;
 }
 .sec-add:active { background: var(--surface-2); }
+.tag {
+  display: inline-block; vertical-align: 2px; margin-right: 6px; padding: 1px 7px; border-radius: 6px;
+  background: var(--tc); color: #fff; font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+}
+.tag-chip { border-color: var(--tc, var(--line)); }
+.tag-chip[aria-pressed="true"] { background: var(--tc, var(--text)); border-color: var(--tc, var(--text)); color: #fff; }
 .menu-who { margin: -4px 0 4px; color: var(--muted); font-size: .85rem; overflow-wrap: anywhere; }
 
 /* ---------- Una lista ---------- */

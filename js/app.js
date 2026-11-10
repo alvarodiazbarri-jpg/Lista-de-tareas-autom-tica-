@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.9';
+  const VERSION = '0.10';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -64,20 +64,25 @@
 
   // ---------- Nube: listas compartidas con la casa ----------
   // En la nube cada lista es un documento de «listas» y cada cosa apuntada uno de «items».
+  // Quién apuntó cada cosa, quién la hizo y su etiqueta van aparte, en «detalles» (mismo id que
+  // la cosa): así, si queda abierta en algún sitio una versión antigua de Dilo que reescribe
+  // «items» con solo los campos que conoce, no borra esos datos.
   // Al guardar se suben solo los cambios; lo que llega de otro móvil reemplaza el estado.
   let nubeDB = null;
   let nubeUnsubs = [];
   let nubeMigrada = false;
-  const nubeDocs = { listas: [], items: [] };
-  const nubeListo = { listas: false, items: false };     // ya llegó la respuesta del servidor
-  const subido = { listas: new Map(), items: new Map() };  // lo último que hay en la nube
+  const COLECCIONES = ['listas', 'items', 'detalles'];
+  const nubeDocs = { listas: [], items: [], detalles: [] };
+  const nubeListo = { listas: false, items: false, detalles: false };   // ya llegó la respuesta del servidor
+  const subido = { listas: new Map(), items: new Map(), detalles: new Map() };  // lo último que hay en la nube
   const canon = (o) => JSON.stringify(Object.keys(o).sort().map((k) => [k, o[k]]));
   const limpio = (o) => JSON.parse(JSON.stringify(o));
 
   // Datos de la nube que esta versión de Dilo no usa (p. ej. de una versión más nueva):
   // se guardan en «otros» y se vuelven a subir tal cual, para no borrarlos nunca.
   const CAMPOS_LISTA = ['name', 'emoji', 'orden'];
-  const CAMPOS_ITEM = ['listId', 'text', 'done', 'createdAt', 'audioId', 'by', 'doneBy', 'doneAt'];
+  const CAMPOS_ITEM = ['listId', 'text', 'done', 'createdAt', 'audioId', 'by', 'doneBy', 'doneAt', 'etiqueta'];
+  const CAMPOS_DETALLE = ['by', 'doneBy', 'doneAt', 'etiqueta'];
   function otrosCampos(data, conocidos) {
     const o = {};
     for (const k of Object.keys(data)) if (!conocidos.includes(k)) o[k] = data[k];
@@ -87,17 +92,21 @@
   function docsLocales() {
     const listas = state.lists.map((l, i) => ({ id: l.id, data: { ...(l.otros || {}), name: l.name, emoji: l.emoji || emojiFor(l.name), orden: i } }));
     const items = [];
+    const detalles = [];
     for (const l of state.lists) {
       for (const it of l.items) {
         const d = { ...(it.otros || {}), listId: l.id, text: it.text, done: !!it.done, createdAt: it.createdAt || 0 };
         if (it.audioId) d.audioId = it.audioId;
-        if (it.by) d.by = it.by;
-        if (it.done && it.doneBy) d.doneBy = it.doneBy;
-        if (it.done && it.doneAt) d.doneAt = it.doneAt;
         items.push({ id: it.id, data: d });
+        const x = {};
+        if (it.by) x.by = it.by;
+        if (it.done && it.doneBy) x.doneBy = it.doneBy;
+        if (it.done && it.doneAt) x.doneAt = it.doneAt;
+        if (it.etiqueta) x.etiqueta = it.etiqueta;
+        if (Object.keys(x).length) detalles.push({ id: it.id, data: x });
       }
     }
-    return { listas, items };
+    return { listas, items, detalles };
   }
 
   function fallaNube(e) {
@@ -107,7 +116,7 @@
   function pushCloud() {
     if (!nubeDB || !nubeMigrada) return;
     const locales = docsLocales();
-    for (const col of ['listas', 'items']) {
+    for (const col of COLECCIONES) {
       const mapa = subido[col];
       const ids = new Set();
       for (const d of locales[col]) {
@@ -132,14 +141,15 @@
         return l;
       });
     const porId = new Map(lists.map((l) => [l.id, l]));
+    const detalles = new Map(nubeDocs.detalles.map((d) => [d.id, d.data]));
     for (const d of nubeDocs.items) {
       const l = porId.get(d.data.listId);
       if (!l) continue;
       const it = { id: d.id, text: d.data.text || '', done: !!d.data.done, createdAt: d.data.createdAt || 0 };
       if (d.data.audioId) it.audioId = d.data.audioId;
-      if (d.data.by) it.by = d.data.by;
-      if (d.data.doneBy) it.doneBy = d.data.doneBy;
-      if (d.data.doneAt) it.doneAt = d.data.doneAt;
+      // Lo de «detalles» manda; si no hay, lo que se guardaba antes dentro de la cosa (versión 0.8)
+      const x = detalles.get(d.id) || {};
+      for (const k of CAMPOS_DETALLE) { const v = x[k] || d.data[k]; if (v) it[k] = v; }
       const otros = otrosCampos(d.data, CAMPOS_ITEM);
       if (otros) it.otros = otros;
       l.items.push(it);
@@ -149,7 +159,7 @@
   }
 
   function recordarSubido() {
-    for (const col of ['listas', 'items']) {
+    for (const col of COLECCIONES) {
       subido[col] = new Map(nubeDocs[col].map((d) => [d.id, canon(d.data)]));
     }
   }
@@ -189,7 +199,7 @@
   }
 
   function alCambiarLaNube() {
-    if (!nubeListo.listas || !nubeListo.items) return;
+    if (COLECCIONES.some((c) => !nubeListo[c])) return;
     if (!nubeMigrada) { migrarAlaNube(); return; }
     const nube = estadoDeLaNube();
     if (!nube.lists.some((l) => l.name === INBOX_NAME)) nube.lists.unshift({ id: uid(), name: INBOX_NAME, emoji: '📥', items: [] });
@@ -205,11 +215,10 @@
     nubeUnsubs.forEach((u) => { try { u(); } catch (e) {} });
     nubeUnsubs = [];
     nubeDB = base;
-    nubeListo.listas = nubeListo.items = false;
-    nubeDocs.listas = []; nubeDocs.items = [];
+    for (const c of COLECCIONES) { nubeListo[c] = false; nubeDocs[c] = []; }
     if (!base) { nubeMigrada = false; return; }
     nubeMigrada = (() => { try { return localStorage.getItem(claveMigrada()) === '1'; } catch (e) { return false; } })();
-    for (const col of ['listas', 'items']) {
+    for (const col of COLECCIONES) {
       nubeUnsubs.push(base.collection(col).onSnapshot((snap) => {
         nubeDocs[col] = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
         // Para juntar por primera vez esperamos la respuesta del servidor, no solo la caché
@@ -477,7 +486,9 @@
   });
 
   // ---------- Notificación de confirmación ----------
-  // Tras apuntar algo, sale un aviso en el móvil. Al tocarlo se abre la lista para revisarlo.
+  // Tras apuntar algo con Dilo cerrada o en segundo plano (p. ej. con un atajo), sale un aviso en el
+  // móvil; al tocarlo se abre la lista. Con Dilo abierta no hace falta: se ve en la pantalla.
+  // (Las citas de la agenda tienen su propio aviso, en agenda.html.)
   const canNotify = () => 'Notification' in window && 'serviceWorker' in navigator;
 
   function askNotifyPermission() {
@@ -488,6 +499,7 @@
 
   async function notifySaved(list, items) {
     if (!canNotify() || Notification.permission !== 'granted') return;
+    if (document.visibilityState === 'visible') return;
     try {
       const reg = await Promise.race([
         navigator.serviceWorker.ready,
@@ -607,28 +619,53 @@
       .sort((a, b) => (a.fecha + (a.hora || '')).localeCompare(b.fecha + (b.hora || '')));
   }
 
+  // Color de contraste (negro o blanco) para escribir encima de un color
+  function tinta(hex) {
+    const n = parseInt(String(hex).slice(1), 16);
+    if (isNaN(n)) return '#fff';
+    const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+    return L > 0.179 ? '#111820' : '#FFFFFF';
+  }
+
+  // Próximo día con citas: todas las de ese día, cada una con el color de su persona (como en la agenda)
   function renderAgendaTile() {
     const prox = agendaPending();
     const { fam } = leerAgenda();
-    const c = prox[0];
+    let aj = {};
+    try { aj = JSON.parse(localStorage.getItem('agenda:aj')) || {}; } catch (e) {}
+    const FAMILIA = { n: (aj.familia && aj.familia.n) || 'Toda la familia', c: (aj.familia && aj.familia.c) || '#44515F' };
+    const NADIE = { n: '', c: (aj.nadie && aj.nadie.c) || '#9AA5B1' };
     const count = $('atCount');
     count.textContent = prox.length;
     count.classList.toggle('has', prox.length > 0);
+    const box = $('atCitas');
+    box.replaceChildren();
+    const c = prox[0];
     if (!c) {
       $('atMes').textContent = new Date().toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
       $('atDia').textContent = new Date().getDate();
-      $('atTitulo').textContent = 'Sin citas próximas';
-      $('atDetalle').textContent = 'Toca para apuntar una';
+      $('atLabel').textContent = 'Mi agenda';
+      box.append(el('b', { class: 'at-vacia', text: 'Sin citas próximas' }), el('span', { class: 'at-hint', text: 'Toca para apuntar una' }));
       return;
     }
     const [y, m, d] = c.fecha.split('-').map(Number);
     const f = new Date(y, m - 1, d);
     $('atMes').textContent = f.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
     $('atDia').textContent = d;
-    $('atTitulo').textContent = c.titulo || 'Cita';
-    const quien = c.de === 'familia' ? 'Toda la familia' : (fam.find((p) => p.id === c.de) || {}).n;
-    const cuando = c.fecha === hoyISO() ? 'Hoy' : f.toLocaleDateString('es-ES', { weekday: 'long' });
-    $('atDetalle').textContent = [cuando.charAt(0).toUpperCase() + cuando.slice(1), c.hora, quien].filter(Boolean).join(' · ');
+    const manana = new Date(); manana.setDate(manana.getDate() + 1);
+    const cuando = c.fecha === hoyISO() ? 'Hoy' : f.toDateString() === manana.toDateString() ? 'Mañana'
+      : f.toLocaleDateString('es-ES', { weekday: 'long' });
+    $('atLabel').textContent = `Mi agenda · ${cuando}`;
+    const delDia = prox.filter((x) => x.fecha === c.fecha);
+    for (const x of delDia.slice(0, 3)) {
+      const p = x.de === 'familia' ? FAMILIA : (fam.find((q) => q.id === x.de) || NADIE);
+      box.append(el('span', { class: 'at-cita', style: `background:${p.c};color:${tinta(p.c)}` },
+        el('b', { text: x.hora || 'Todo el día' }), ' ',
+        el('span', { class: 'at-tit', text: x.titulo || 'Cita' }),
+        p.n ? el('small', { text: p.n }) : null));
+    }
+    if (delDia.length > 3) box.append(el('span', { class: 'at-hint', text: `y ${delDia.length - 3} más ese día` }));
   }
 
   function renderHome() {
@@ -650,20 +687,19 @@
         el('span', { class: 'tile-top' },
           el('span', { class: 'tile-emoji', text: l.emoji }),
           el('span', { class: 'tile-count' + (pend.length ? ' has' : ''), text: String(pend.length) })),
-        el('span', { class: 'tile-name', text: l.name }),
-        pend.length ? el('ul', { class: 'tile-peek' }, ...pend.slice(0, 4).map((i) => el('li', { text: i.text }))) : null);
+        el('span', { class: 'tile-name', text: l.name }));
       tile.addEventListener('click', () => { openList(l.id); });
       wrap.appendChild(tile);
     }
     ajustarTiles();
   }
 
-  // Las tarjetas de las listas ocupan justo el hueco libre de la pantalla, sin tener que desplazarse:
-  // con pocas listas son grandes y enseñan más cosas apuntadas; con muchas se hacen pequeñas
-  // (y pasan a 3 columnas). Solo con muchísimas listas hay que desplazarse.
+  // Las tarjetas de las listas ocupan el hueco libre de la pantalla, sin tener que desplazarse:
+  // con pocas listas son grandes; con muchas se hacen pequeñas (3 columnas y luego filas).
+  // Solo con muchísimas listas hay que desplazarse.
   // Formas de las tarjetas, de más grande a más pequeña: [columnas, alto mínimo, estilo]
   const FORMAS = [[2, 84, ''], [3, 84, ''], [3, 66, 'mini'], [2, 42, 'fila']];
-  const ALTO_MAX = 240;
+  const ALTO_MAX = 150;
   function ajustarTiles() {
     if ($('homeView').hidden) return;
     const grid = document.querySelector('.tiles');
@@ -683,14 +719,6 @@
     grid.style.gridAutoRows = h + 'px';
     grid.classList.toggle('mini', estilo === 'mini' || (!estilo && h < 96));
     grid.classList.toggle('fila', estilo === 'fila');
-    // Cuántas cosas apuntadas caben de vista previa en cada tarjeta
-    const lineas = estilo ? 0 : Math.max(0, Math.min(6, Math.floor((h - 92) / 19)));
-    for (const t of tiles) {
-      const ul = t.querySelector('.tile-peek');
-      if (!ul) continue;
-      ul.hidden = !lineas;
-      [...ul.children].forEach((li, i) => { li.hidden = i >= lineas; });
-    }
   }
   let ajusteTimer;
   window.addEventListener('resize', () => {
@@ -742,13 +770,24 @@
   const ICON_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const ICON_MORE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
 
+  // Etiquetas de las cosas apuntadas. Sin etiqueta = normal. Para añadir más, basta con
+  // añadirlas aquí (id, nombre, color); las urgentes salen siempre arriba.
+  const ETIQUETAS = [
+    { id: 'urgente', n: 'Urgente', c: '#D32F2F' },
+    { id: 'informativa', n: 'Informativa', c: '#1D6FD1' },
+    { id: 'curiosidad', n: 'Curiosidad', c: '#8A4FBF' },
+  ];
+  const etiquetaDe = (item) => ETIQUETAS.find((e) => e.id === item.etiqueta) || null;
+  const pesoEtiqueta = (item) => (item.etiqueta === 'urgente' ? 0 : 1);
+
   function fila(list, item) {
     const li = el('li', { class: 'row' + (item.done ? ' done' : '') + (recienApuntados.has(item.id) ? ' nuevo' : '') });
     const chk = el('button', { class: 'check', type: 'button', 'aria-label': item.done ? 'Marcar como pendiente' : 'Marcar como hecho', 'aria-pressed': String(!!item.done) });
     chk.innerHTML = ICON_CHECK;
     chk.addEventListener('click', () => { marcarHecha(item, !item.done); save(); render(); });
     const txt = el('button', { class: 'row-text', type: 'button', 'aria-label': 'Editar: ' + item.text },
-      el('b', { text: item.text }), quienYCuando(item));
+      el('b', {}, etiquetaDe(item) ? el('span', { class: 'tag', style: `--tc:${etiquetaDe(item).c}`, text: etiquetaDe(item).n }) : null, item.text),
+      quienYCuando(item));
     txt.addEventListener('click', () => editarItem(item));
     if (item.audioId) {
       const audio = el('audio');
@@ -766,7 +805,7 @@
   let verHechas = false;
   function renderList(list) {
     const isInbox = list.name === INBOX_NAME;
-    const pend = list.items.filter((i) => !i.done);
+    const pend = list.items.filter((i) => !i.done).sort((a, b) => pesoEtiqueta(a) - pesoEtiqueta(b));
     const hechas = list.items.filter((i) => i.done);
     document.documentElement.style.setProperty('--hue', colorDe(list));
     $('listEmoji').textContent = list.emoji;
@@ -812,6 +851,19 @@
     $('itemMenuWho').textContent = item.by
       ? `Apuntado por ${p ? p.nombre : item.by} (${item.by}) · ${cuandoFue(item.createdAt)}`
       : `Sin datos de quién lo apuntó · ${cuandoFue(item.createdAt)}`;
+    const tags = $('itemTags');
+    tags.replaceChildren();
+    for (const e of [{ id: '', n: 'Normal', c: '#6B7785' }, ...ETIQUETAS]) {
+      const on = (item.etiqueta || '') === e.id;
+      const b = el('button', { class: 'chip tag-chip', type: 'button', 'aria-pressed': String(on), style: e.c ? `--tc:${e.c}` : '' }, e.n);
+      b.addEventListener('click', () => {
+        snapshot();
+        if (e.id) item.etiqueta = e.id; else delete item.etiqueta;
+        $('itemMenu').close();
+        save(); render();
+      });
+      tags.append(b);
+    }
     const grid = $('itemMoveTo');
     grid.replaceChildren();
     for (const l of state.lists) {

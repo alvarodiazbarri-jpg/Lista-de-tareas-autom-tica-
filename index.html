@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
-  <link rel="stylesheet" href="styles.css?v=0.9">
+  <link rel="stylesheet" href="styles.css?v=0.10">
 </head>
 <body>
   <!-- Cabecera de inicio -->
@@ -62,9 +62,8 @@
       <a id="agendaTile" class="agenda-tile" href="agenda.html">
         <span class="at-cal" aria-hidden="true"><span id="atMes"></span><b id="atDia"></b></span>
         <span class="at-text">
-          <span class="at-label">Mi agenda</span>
-          <b id="atTitulo">Sin citas próximas</b>
-          <span id="atDetalle"></span>
+          <span class="at-label" id="atLabel">Mi agenda</span>
+          <span id="atCitas" class="at-citas"></span>
         </span>
         <span id="atCount" class="at-count"></span>
       </a>
@@ -129,7 +128,8 @@
       <li><b>Cualquier otra cosa</b> se guarda en la <i>Bandeja de entrada</i> para organizarla luego.</li>
     </ul>
     <p>Si no hay conexión o el navegador no reconoce la voz, se graba el audio y lo encontrarás en la Bandeja de entrada.</p>
-    <p>Cada vez que apuntes algo te llegará una <b>notificación</b> confirmándolo. Tócala para abrir la lista y revisarlo.</p>
+    <p>Al guardar una cita en <b>Mi agenda</b> te llega una <b>notificación</b> confirmándolo. En las listas no hace falta: lo ves en la pantalla al momento.</p>
+    <p>En <b>⋯</b> de cada cosa apuntada puedes ponerle una <b>etiqueta</b> (urgente, informativa, curiosidad); las urgentes salen arriba.</p>
     <button id="notifyBtn" type="button" class="ghost-btn notify-btn">🔔 Activar notificaciones</button>
     <form method="dialog"><button class="primary-btn">Entendido</button></form>
     <p id="version" class="version"></p>
@@ -151,6 +151,8 @@
       <h2 id="itemMenuTitle"></h2>
       <p id="itemMenuWho" class="menu-who"></p>
       <button id="itemEdit" class="menu-item" type="button">✏️ Editar</button>
+      <p class="menu-label">Etiqueta</p>
+      <div id="itemTags" class="move-grid"></div>
       <p class="menu-label">Mover a</p>
       <div id="itemMoveTo" class="move-grid"></div>
       <button id="itemDelete" class="menu-item danger" type="button">🗑️ Borrar</button>
@@ -177,8 +179,8 @@
     </form>
   </dialog>
 
-  <script src="js/parser.js?v=0.9"></script>
-  <script src="js/app.js?v=0.9"></script>
-  <script type="module" src="js/nube.js?v=0.9"></script>
+  <script src="js/parser.js?v=0.10"></script>
+  <script src="js/app.js?v=0.10"></script>
+  <script type="module" src="js/nube.js?v=0.10"></script>
 </body>
 </html>
