@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.8.2';
+  const VERSION = '0.9';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -651,11 +651,55 @@
           el('span', { class: 'tile-emoji', text: l.emoji }),
           el('span', { class: 'tile-count' + (pend.length ? ' has' : ''), text: String(pend.length) })),
         el('span', { class: 'tile-name', text: l.name }),
-        pend.length ? el('ul', { class: 'tile-peek' }, ...pend.slice(0, 2).map((i) => el('li', { text: i.text }))) : null);
+        pend.length ? el('ul', { class: 'tile-peek' }, ...pend.slice(0, 4).map((i) => el('li', { text: i.text }))) : null);
       tile.addEventListener('click', () => { openList(l.id); });
       wrap.appendChild(tile);
     }
+    ajustarTiles();
   }
+
+  // Las tarjetas de las listas ocupan justo el hueco libre de la pantalla, sin tener que desplazarse:
+  // con pocas listas son grandes y enseñan más cosas apuntadas; con muchas se hacen pequeñas
+  // (y pasan a 3 columnas). Solo con muchísimas listas hay que desplazarse.
+  // Formas de las tarjetas, de más grande a más pequeña: [columnas, alto mínimo, estilo]
+  const FORMAS = [[2, 84, ''], [3, 84, ''], [3, 66, 'mini'], [2, 42, 'fila']];
+  const ALTO_MAX = 240;
+  function ajustarTiles() {
+    if ($('homeView').hidden) return;
+    const grid = document.querySelector('.tiles');
+    const tiles = [...grid.querySelectorAll('.tile')];
+    if (!tiles.length) return;
+    const gap = 10;
+    const arriba = grid.getBoundingClientRect().top + window.scrollY;
+    const abajo = window.innerHeight - document.querySelector('.dock').offsetHeight - 10;
+    const hueco = abajo - arriba;
+    const alto = (c) => { const filas = Math.ceil(tiles.length / c); return (hueco - gap * (filas - 1)) / filas; };
+    const ancha = window.innerWidth >= 560;
+    const formas = FORMAS.map(([c, min, estilo]) => [ancha && c === 2 && !estilo ? 3 : c, min, estilo]);
+    // La primera forma que quepa sin desplazarse; si ninguna cabe, la más pequeña
+    let [cols, min, estilo] = formas.find(([c, m]) => alto(c) >= m) || formas[formas.length - 1];
+    const h = Math.floor(Math.max(min, Math.min(ALTO_MAX, alto(cols))));
+    grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+    grid.style.gridAutoRows = h + 'px';
+    grid.classList.toggle('mini', estilo === 'mini' || (!estilo && h < 96));
+    grid.classList.toggle('fila', estilo === 'fila');
+    // Cuántas cosas apuntadas caben de vista previa en cada tarjeta
+    const lineas = estilo ? 0 : Math.max(0, Math.min(6, Math.floor((h - 92) / 19)));
+    for (const t of tiles) {
+      const ul = t.querySelector('.tile-peek');
+      if (!ul) continue;
+      ul.hidden = !lineas;
+      [...ul.children].forEach((li, i) => { li.hidden = i >= lineas; });
+    }
+  }
+  let ajusteTimer;
+  window.addEventListener('resize', () => {
+    // Con el teclado abierto la pantalla encoge: no reordenar entonces
+    if (document.activeElement === $('textInput')) return;
+    clearTimeout(ajusteTimer);
+    ajusteTimer = setTimeout(ajustarTiles, 120);
+  });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarTiles).catch(() => {});
 
   // ---- Una lista ----
   // «Ahora mismo», «Hace 5 min», «Hoy 9:15», «Ayer 18:30», «3 nov 18:30»
@@ -762,6 +806,12 @@
   function abrirMenuItem(list, item) {
     menuItem = { list, item };
     $('itemMenuTitle').textContent = item.text;
+    // Quién lo apuntó (también sirve para ver si ese dato llegó a guardarse)
+    const N = window.DiloNube;
+    const p = item.by && N && N.persona ? N.persona(item.by) : null;
+    $('itemMenuWho').textContent = item.by
+      ? `Apuntado por ${p ? p.nombre : item.by} (${item.by}) · ${cuandoFue(item.createdAt)}`
+      : `Sin datos de quién lo apuntó · ${cuandoFue(item.createdAt)}`;
     const grid = $('itemMoveTo');
     grid.replaceChildren();
     for (const l of state.lists) {
@@ -813,7 +863,7 @@
     $('listMenuTitle').textContent = `${l.emoji} ${l.name}`;
     $('listMenu').showModal();
   });
-  for (const id of ['renameListBtn', 'clearDoneBtn', 'deleteListBtn']) {
+  for (const id of ['shareListBtn', 'renameListBtn', 'clearDoneBtn', 'deleteListBtn']) {
     $(id).addEventListener('click', () => { if ($('listMenu').open) $('listMenu').close(); });
   }
 
@@ -831,6 +881,25 @@
     const list = ensureList(name.trim());
     save();
     openList(list.id);
+  });
+
+  // Copiar la lista como texto (para pegarla en WhatsApp, en un correo o en el chat con Claude)
+  $('shareListBtn').addEventListener('click', async () => {
+    const list = getList(currentListId);
+    if (!list) return;
+    const N = window.DiloNube;
+    const linea = (i) => {
+      const p = i.by && N && N.persona ? N.persona(i.by) : null;
+      return `- ${i.text}${p ? ` (${p.nombre})` : ''}`;
+    };
+    const pend = list.items.filter((i) => !i.done).map(linea);
+    const hechas = list.items.filter((i) => i.done).map(linea);
+    const texto = [`${list.emoji} ${list.name}`, ...pend, ...(hechas.length ? ['', 'Hechas:', ...hechas] : [])].join('\n');
+    try {
+      if (navigator.share) { await navigator.share({ title: list.name, text: texto }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(texto); toast('📋 Lista copiada. Ya puedes pegarla donde quieras.'); }
+    catch (e) { await ask('Copia el texto de la lista', texto, 'Cerrar'); }
   });
 
   $('clearDoneBtn').addEventListener('click', () => {

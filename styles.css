@@ -178,7 +178,7 @@ main, .home-head, .list-head {
 .tiles-inner { display: contents; }
 .tile {
   --hue: var(--ink);
-  position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 96px;
+  position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 0;
   padding: 12px; border-radius: 16px; text-align: left;
   border: 1px solid color-mix(in srgb, var(--hue) 35%, var(--line));
   background: color-mix(in srgb, var(--hue) 9%, var(--surface)); box-shadow: var(--shadow);
@@ -206,13 +206,26 @@ main, .home-head, .list-head {
 .tile-peek { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: .85rem; }
 .tile-peek li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tile-peek li::before { content: "○ "; opacity: .7; }
-.tile-new {
-  align-items: center; justify-content: center; gap: 6px;
-  border: 1.5px dashed var(--muted); background: transparent; box-shadow: none; color: var(--muted);
+/* Muchas listas: tarjetas pequeñas, solo icono, número y nombre */
+.tiles.mini .tile { padding: 8px 10px 8px 12px; gap: 4px; justify-content: center; }
+.tiles.mini .tile-emoji { width: 28px; height: 28px; font-size: 1rem; border-radius: 8px; }
+.tiles.mini .tile-count { min-width: 24px; height: 24px; font-size: .8rem; }
+.tiles.mini .tile-name { font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+/* Muchísimas listas: una fila por lista (icono, nombre y número) */
+.tiles.fila .tile { flex-direction: row; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border-radius: 12px; }
+.tiles.fila .tile-top { display: contents; }
+.tiles.fila .tile-emoji { width: 28px; height: 28px; font-size: 1rem; border-radius: 8px; }
+.tiles.fila .tile-name { order: 1; flex: 1; min-width: 0; font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+.tiles.fila .tile-count { order: 2; margin-left: 0; min-width: 24px; height: 24px; font-size: .8rem; }
+.tiles.fila .tile::before { width: 4px; }
+.sec-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+.sec-row .sec-title { margin: 0 2px; }
+.sec-add {
+  border: 1px solid var(--line); background: var(--surface); color: var(--text); box-shadow: var(--shadow);
+  border-radius: 16px; height: 32px; padding: 0 12px; font-size: .88rem; font-weight: 700;
 }
-.tile-new::before { display: none; }
-.tile-plus { font-size: 1.6rem; line-height: 1; font-weight: 300; }
-.tile-new .tile-name { font-size: 1rem; }
+.sec-add:active { background: var(--surface-2); }
+.menu-who { margin: -4px 0 4px; color: var(--muted); font-size: .85rem; overflow-wrap: anywhere; }
 
 /* ---------- Una lista ---------- */
 .list-head {
@@ -415,7 +428,4 @@ dialog li { margin-bottom: 6px; }
 @media (prefers-reduced-motion: reduce) {
   .mic.recording, .mic-bars i, .row.nuevo { animation: none; }
   .tile:active { transform: none; }
-}
-@media (min-width: 560px) {
-  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

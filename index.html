@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
-  <link rel="stylesheet" href="styles.css?v=0.8.2">
+  <link rel="stylesheet" href="styles.css?v=0.9">
 </head>
 <body>
   <!-- Cabecera de inicio -->
@@ -69,13 +69,12 @@
         <span id="atCount" class="at-count"></span>
       </a>
 
-      <h2 class="sec-title">Tus listas</h2>
+      <div class="sec-row">
+        <h2 class="sec-title">Tus listas</h2>
+        <button id="newListBtn" class="sec-add" type="button">+ Nueva lista</button>
+      </div>
       <div class="tiles">
         <div id="lists" class="tiles-inner"></div>
-        <button id="newListBtn" class="tile tile-new" type="button">
-          <span class="tile-plus" aria-hidden="true">+</span>
-          <span class="tile-name">Nueva lista</span>
-        </button>
       </div>
     </section>
 
@@ -139,6 +138,7 @@
   <dialog id="listMenu" class="sheet-dlg">
     <div class="sheet-body">
       <h2 id="listMenuTitle">Lista</h2>
+      <button id="shareListBtn" class="menu-item" type="button">📋 Copiar o compartir la lista</button>
       <button id="renameListBtn" class="menu-item" type="button">✏️ Cambiar el nombre</button>
       <button id="clearDoneBtn" class="menu-item" type="button">🧹 Borrar las hechas</button>
       <button id="deleteListBtn" class="menu-item danger" type="button">🗑️ Eliminar la lista</button>
@@ -149,6 +149,7 @@
   <dialog id="itemMenu" class="sheet-dlg">
     <div class="sheet-body">
       <h2 id="itemMenuTitle"></h2>
+      <p id="itemMenuWho" class="menu-who"></p>
       <button id="itemEdit" class="menu-item" type="button">✏️ Editar</button>
       <p class="menu-label">Mover a</p>
       <div id="itemMoveTo" class="move-grid"></div>
@@ -176,8 +177,8 @@
     </form>
   </dialog>
 
-  <script src="js/parser.js?v=0.8.2"></script>
-  <script src="js/app.js?v=0.8.2"></script>
-  <script type="module" src="js/nube.js?v=0.8.2"></script>
+  <script src="js/parser.js?v=0.9"></script>
+  <script src="js/app.js?v=0.9"></script>
+  <script type="module" src="js/nube.js?v=0.9"></script>
 </body>
 </html>
