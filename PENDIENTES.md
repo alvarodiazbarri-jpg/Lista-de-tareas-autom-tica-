@@ -2,18 +2,32 @@
 
 Lista de mejoras para la app. Marca con [x] lo que esté hecho.
 
-## Próximas
-- [ ] **Apuntar citas con la voz**: «cita con el dentista el martes a las 10» → se guarda en Mi agenda con fecha, hora y persona.
-- [ ] **Recetas dentro de Dilo**, igual que se ha hecho con la agenda.
-- [ ] **Leer citas desde fotos** (lo que hacía «Importar» en la Mi agenda de Claude): buscar otra forma, porque fuera de claude.ai no se puede usar a Claude así.
-- [ ] **Guardar las listas y la agenda en la nube** (sincronización, por ejemplo con Firebase): para verlas en varios móviles, compartir la agenda con la familia como antes y no perderlas si se borra el navegador. Es el paso necesario para lo siguiente.
-- [ ] **Apuntar con el móvil bloqueado**: un atajo de Siri (iPhone) o de Google/Tasker (Android) que dicte la idea y la envíe a la nube; Dilo la recoge en la Bandeja de entrada al abrirse.
+## Próximas (en este orden)
+1. [ ] **Guardar las listas y la agenda en la nube** (Firebase, gratis, de Google).
+   - Para ver lo mismo en varios móviles y no perder nada si se cambia de móvil o se borra el navegador.
+   - Lo que tiene que hacer Álvaro: crear una cuenta gratuita de Firebase con su cuenta de Google (unos 10 minutos, con guía paso a paso).
+   - Cada persona entra en Dilo con su cuenta de Google; solo la familia ve sus datos.
+2. [ ] **Compartir con mi mujer** (y con la familia): que ella instale Dilo en su móvil, entre con su cuenta de Google y veamos las mismas citas y listas. Lo que apunte uno aparece en el móvil del otro en segundos. Necesita el punto 1.
+   - Elegir qué se comparte: la agenda seguro; ¿también la compra? ¿Las tareas e ideas de cada uno quedan privadas?
+3. [ ] **Apuntar citas con la voz**: «cita con el dentista el martes a las 10 para Julia» → se guarda en Mi agenda con fecha, hora, lugar y persona, y llega la notificación de confirmación.
+4. [ ] **Recetas dentro de Dilo**, igual que se ha hecho con la agenda (copiar «Recetas de Karlos Bernal» y «Comidas de la semana»).
+5. [ ] **Leer citas desde fotos** (lo que hacía «Importar» en la Mi agenda de Claude): buscar otra forma, porque fuera de claude.ai no se puede usar a Claude así.
+6. [ ] **Apuntar con el móvil bloqueado**: un atajo de Android (Tasker o rutina de Google) que dicte la idea y la envíe a la nube; Dilo la recoge en la Bandeja de entrada al abrirse. Necesita el punto 1.
+7. [ ] **Avisos de citas con la app cerrada**: ahora solo saltan con Dilo abierta. Con la nube se pueden mandar notificaciones de verdad (o seguir usando «Añadir al calendario del móvil»).
+
+## Por revisar
+- [ ] Probar la voz en el móvil real con la versión 0.5.1 (crear lista y apuntar en la misma frase, apuntar en una lista, notificación).
+- [ ] Listas cuyo nombre lleva «con» (por ejemplo «Cena con amigos»): por voz se entiende como «lista Cena» + «amigos». De momento crearlas con el botón «+ Nueva lista».
+- [ ] «Crea una lista de ferretería tornillos y tacos» (sin «y apunta» o «con») mete todo en el nombre. Pensar si la app puede preguntar en estos casos.
+- [ ] Recuperar las fotos de las citas que se quedaron en la Mi agenda antigua (guardar copia de seguridad desde allí con las fotos y cargarla en Dilo).
 
 ## Hecho
+- [x] Crear una lista y apuntar en ella con una sola frase: «Crea una lista de viajes y apunta pasaporte» (versión 0.5.1).
 - [x] «Mi agenda» dentro de Dilo, igual que la original, con las 18 citas y la familia copiadas (versión 0.5). Las fotos de las citas se quedaron en la app antigua.
 - [x] Notificación en el móvil al apuntar algo; al tocarla se abre la lista para revisarlo (versión 0.4).
+- [x] Las actualizaciones llegan al móvil al abrir la app (versión 0.3.1).
+- [x] Voz en Android sin frases repetidas, y la lista se entiende delante o detrás (versión 0.3).
 
 ## Ideas para más adelante
-- [ ] Recordatorios y avisos (por ejemplo, para las tareas con fecha).
+- [ ] Recordatorios para las tareas con fecha.
 - [ ] Ordenar automáticamente la Bandeja de entrada con ayuda de IA.
-- [ ] Compartir una lista (por ejemplo, la de la compra) con otra persona.
