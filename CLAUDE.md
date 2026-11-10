@@ -4,6 +4,8 @@ App web instalable (PWA) de Álvaro para apuntar con la voz tareas, compras, ide
 compartida con su familia. Publicada en https://alvarodiazbarri-jpg.github.io/Lista-de-tareas-autom-tica-/
 
 **Qué falta por hacer: `PENDIENTES.md`** (en orden de prioridad). Actualízalo al terminar cada cosa.
+Álvaro apunta sus ideas para Dilo en la lista **«Ideas DILO»** de la app: pídele que la copie (⋯ → «📋 Copiar o
+compartir la lista») y la pegue en el chat, y pasa lo nuevo a `PENDIENTES.md`.
 
 ## Cómo trabajar con Álvaro
 - Habla siempre en **español**, con explicaciones **sencillas y claras**, paso a paso. No es programador.
