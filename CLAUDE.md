@@ -29,7 +29,10 @@ compartir la lista») y la pegue en el chat, y pasa lo nuevo a `PENDIENTES.md`.
 - `js/nube.js` (módulo): Firebase (proyecto `dilo-2dfb7`): entrar con Google, «casa» compartida e
   invitaciones por correo. Expone `window.DiloNube` y el evento `dilonube`.
   - Firestore: `hogares/{id}` con `miembros` (correos en minúsculas) y dentro `listas`, `items`
-    (un documento por cosa apuntada), `citas`, `familia`, `ajustes/general`.
+    (un documento por cosa apuntada), `detalles` (quién/cuándo/etiqueta de cada cosa, mismo id),
+    `perfiles`, `citas`, `familia`, `ajustes/general`.
+  - Listas privadas («Solo para mí»): en `usuarios/{uid}` con las mismas `listas`, `items`, `detalles`.
+    Solo las lee su dueño (lo protegen las reglas). En `js/app.js` son la fuente `'mia'`.
   - Reglas en `firestore.rules` (copia; las publica Álvaro en la consola de Firebase).
   - Librería Firebase 10.12.2 copiada en `js/vendor/firebase` (no depende de gstatic).
 - `sw.js`: funciona sin conexión; **sube `CACHE` y los `?v=` de `index.html` en cada versión** para que

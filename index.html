@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
-  <link rel="stylesheet" href="styles.css?v=0.13">
+  <link rel="stylesheet" href="styles.css?v=0.14">
 </head>
 <body>
   <!-- Cabecera de inicio -->
@@ -125,6 +125,7 @@
       <li><b>«Crea una lista de viajes y apunta pasaporte y maleta»</b> o <b>«Crea una lista de viajes con pasaporte»</b> — crea la lista y apunta a la vez</li>
       <li>Si estás <b>dentro de una lista</b> y no nombras otra, se apunta en esa lista.</li>
       <li><b>«Añade una bici a la lista de regalos»</b> — si no existe, la crea</li>
+      <li><b>«Crea una lista privada de regalos»</b> — una lista que solo ves tú (también en ⋯ de cada lista → «Hacerla privada»)</li>
       <li><b>«Quita la leche de la compra»</b>, <b>«Borra pan»</b>, <b>«Elimina llamar al taller»</b> — borra lo apuntado (con «Deshacer»)</li>
       <li><b>«Tacha el pan»</b> o <b>«Marca la leche como hecha»</b> — lo marca como hecho</li>
       <li><b>Cualquier otra cosa</b> se guarda en la <i>Bandeja de entrada</i> para organizarla luego.</li>
@@ -145,6 +146,7 @@
   <dialog id="listMenu" class="sheet-dlg">
     <div class="sheet-body">
       <h2 id="listMenuTitle">Lista</h2>
+      <button id="privListBtn" class="menu-item" type="button">🔒 Hacerla privada (solo para mí)</button>
       <button id="shareListBtn" class="menu-item" type="button">📋 Copiar o compartir la lista</button>
       <button id="renameListBtn" class="menu-item" type="button">✏️ Cambiar el nombre</button>
       <button id="clearDoneBtn" class="menu-item" type="button">🧹 Borrar las hechas</button>
@@ -186,8 +188,8 @@
     </form>
   </dialog>
 
-  <script src="js/parser.js?v=0.13"></script>
-  <script src="js/app.js?v=0.13"></script>
-  <script type="module" src="js/nube.js?v=0.13"></script>
+  <script src="js/parser.js?v=0.14"></script>
+  <script src="js/app.js?v=0.14"></script>
+  <script type="module" src="js/nube.js?v=0.14"></script>
 </body>
 </html>
