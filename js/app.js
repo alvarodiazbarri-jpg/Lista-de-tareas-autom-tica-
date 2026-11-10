@@ -68,13 +68,20 @@
   // la cosa): así, si queda abierta en algún sitio una versión antigua de Dilo que reescribe
   // «items» con solo los campos que conoce, no borra esos datos.
   // Al guardar se suben solo los cambios; lo que llega de otro móvil reemplaza el estado.
-  let nubeDB = null;
+  // Las listas privadas («Solo para mí») van en otro sitio de la nube, usuarios/{uid}, que solo
+  // puede leer su dueño (lo protegen las reglas de Firebase): a los demás móviles ni les llegan.
+  // FUENTES: 'casa' (lo compartido) y 'mia' (lo privado), cada una con sus tres colecciones.
+  let nubeDB = null;           // base de la casa
+  let miaDB = null;            // base privada
+  let miaOk = false;           // el sitio privado funciona (si faltan las reglas, da «sin permiso»)
   let nubeUnsubs = [];
   let nubeMigrada = false;
   const COLECCIONES = ['listas', 'items', 'detalles'];
-  const nubeDocs = { listas: [], items: [], detalles: [] };
-  const nubeListo = { listas: false, items: false, detalles: false };   // ya llegó la respuesta del servidor
-  const subido = { listas: new Map(), items: new Map(), detalles: new Map() };  // lo último que hay en la nube
+  const FUENTES = ['casa', 'mia'];
+  const vacio = (v) => Object.fromEntries(COLECCIONES.map((c) => [c, typeof v === 'function' ? v() : v]));
+  const nubeDocs = { casa: vacio(() => []), mia: vacio(() => []) };
+  const nubeListo = { casa: vacio(false), mia: vacio(false) };   // ya llegó la respuesta del servidor
+  const subido = { casa: vacio(() => new Map()), mia: vacio(() => new Map()) };  // lo último que hay en la nube
   const canon = (o) => JSON.stringify(Object.keys(o).sort().map((k) => [k, o[k]]));
   const limpio = (o) => JSON.parse(JSON.stringify(o));
 
@@ -89,11 +96,14 @@
     return Object.keys(o).length ? o : null;
   }
 
-  function docsLocales() {
-    const listas = state.lists.map((l, i) => ({ id: l.id, data: { ...(l.otros || {}), name: l.name, emoji: l.emoji || emojiFor(l.name), orden: i } }));
+  function docsLocales(fuente) {
+    const mias = fuente === 'mia';
+    const listas = [];
     const items = [];
     const detalles = [];
-    for (const l of state.lists) {
+    state.lists.forEach((l, i) => {
+      if (!!l.privada !== mias) return;
+      listas.push({ id: l.id, data: { ...(l.otros || {}), name: l.name, emoji: l.emoji || emojiFor(l.name), orden: i } });
       for (const it of l.items) {
         const d = { ...(it.otros || {}), listId: l.id, text: it.text, done: !!it.done, createdAt: it.createdAt || 0 };
         if (it.audioId) d.audioId = it.audioId;
@@ -105,7 +115,7 @@
         if (it.etiqueta) x.etiqueta = it.etiqueta;
         if (Object.keys(x).length) detalles.push({ id: it.id, data: x });
       }
-    }
+    });
     return { listas, items, detalles };
   }
 
@@ -115,53 +125,72 @@
 
   function pushCloud() {
     if (!nubeDB || !nubeMigrada) return;
-    const locales = docsLocales();
-    for (const col of COLECCIONES) {
-      const mapa = subido[col];
-      const ids = new Set();
-      for (const d of locales[col]) {
-        ids.add(d.id);
-        const c = canon(d.data);
-        if (mapa.get(d.id) !== c) { mapa.set(d.id, c); nubeDB.collection(col).doc(d.id).set(limpio(d.data)).catch(fallaNube); }
-      }
-      for (const id of [...mapa.keys()]) {
-        if (!ids.has(id)) { mapa.delete(id); nubeDB.collection(col).doc(id).delete().catch(fallaNube); }
+    for (const fuente of FUENTES) {
+      const base = fuente === 'casa' ? nubeDB : (miaOk ? miaDB : null);
+      if (!base) continue;
+      const locales = docsLocales(fuente);
+      for (const col of COLECCIONES) {
+        const mapa = subido[fuente][col];
+        const ids = new Set();
+        for (const d of locales[col]) {
+          ids.add(d.id);
+          const c = canon(d.data);
+          if (mapa.get(d.id) !== c) { mapa.set(d.id, c); base.collection(col).doc(d.id).set(limpio(d.data)).catch(fallaNube); }
+        }
+        for (const id of [...mapa.keys()]) {
+          if (!ids.has(id)) { mapa.delete(id); base.collection(col).doc(id).delete().catch(fallaNube); }
+        }
       }
     }
   }
 
-  // Construye las listas a partir de lo que hay en la nube
+  // Construye las listas a partir de lo que hay en la nube (lo de la casa y lo privado)
   function estadoDeLaNube() {
-    const lists = nubeDocs.listas
-      .slice().sort((a, b) => (a.data.orden || 0) - (b.data.orden || 0))
-      .map((d) => {
-        const l = { id: d.id, name: d.data.name || 'Lista', emoji: d.data.emoji || emojiFor(d.data.name || ''), items: [] };
+    const lists = [];
+    for (const fuente of FUENTES) {
+      for (const d of nubeDocs[fuente].listas) {
+        const l = { id: d.id, name: d.data.name || 'Lista', emoji: d.data.emoji || emojiFor(d.data.name || ''), items: [], orden: d.data.orden || 0 };
+        if (fuente === 'mia') l.privada = true;
         const otros = otrosCampos(d.data, CAMPOS_LISTA);
         if (otros) l.otros = otros;
-        return l;
-      });
+        lists.push(l);
+      }
+    }
+    lists.sort((a, b) => a.orden - b.orden);
+    lists.forEach((l) => delete l.orden);
     const porId = new Map(lists.map((l) => [l.id, l]));
-    const detalles = new Map(nubeDocs.detalles.map((d) => [d.id, d.data]));
-    for (const d of nubeDocs.items) {
-      const l = porId.get(d.data.listId);
-      if (!l) continue;
-      const it = { id: d.id, text: d.data.text || '', done: !!d.data.done, createdAt: d.data.createdAt || 0 };
-      if (d.data.audioId) it.audioId = d.data.audioId;
-      // Lo de «detalles» manda; si no hay, lo que se guardaba antes dentro de la cosa (versión 0.8)
-      const x = detalles.get(d.id) || {};
-      for (const k of CAMPOS_DETALLE) { const v = x[k] || d.data[k]; if (v) it[k] = v; }
-      const otros = otrosCampos(d.data, CAMPOS_ITEM);
-      if (otros) it.otros = otros;
-      l.items.push(it);
+    for (const fuente of FUENTES) {
+      const detalles = new Map(nubeDocs[fuente].detalles.map((d) => [d.id, d.data]));
+      for (const d of nubeDocs[fuente].items) {
+        const l = porId.get(d.data.listId);
+        if (!l) continue;
+        const it = { id: d.id, text: d.data.text || '', done: !!d.data.done, createdAt: d.data.createdAt || 0 };
+        if (d.data.audioId) it.audioId = d.data.audioId;
+        // Lo de «detalles» manda; si no hay, lo que se guardaba antes dentro de la cosa (versión 0.8)
+        const x = detalles.get(d.id) || {};
+        for (const k of CAMPOS_DETALLE) { const v = x[k] || d.data[k]; if (v) it[k] = v; }
+        const otros = otrosCampos(d.data, CAMPOS_ITEM);
+        if (otros) it.otros = otros;
+        l.items.push(it);
+      }
     }
     lists.forEach((l) => l.items.sort((a, b) => b.createdAt - a.createdAt));
     return { lists };
   }
 
   function recordarSubido() {
-    for (const col of COLECCIONES) {
-      subido[col] = new Map(nubeDocs[col].map((d) => [d.id, canon(d.data)]));
+    for (const fuente of FUENTES) {
+      for (const col of COLECCIONES) {
+        subido[fuente][col] = new Map(nubeDocs[fuente][col].map((d) => [d.id, canon(d.data)]));
+      }
     }
+  }
+
+  // Si el sitio privado no funciona (faltan las reglas o no hay conexión), las listas privadas
+  // que ya había en este móvil se conservan tal cual en vez de desaparecer
+  function conservarPrivadas(nube) {
+    if (miaOk) return;
+    for (const l of state.lists) if (l.privada && !nube.lists.some((x) => x.id === l.id)) nube.lists.push(l);
   }
 
   const claveMigrada = () => 'dilo:nube:' + nubeDB.hogarId;
@@ -173,9 +202,10 @@
     const norm = (n) => window.VoiceParser.normalize(n);
     let nuevas = 0;
     for (const local of state.lists) {
-      let destino = nube.lists.find((l) => l.id === local.id) || nube.lists.find((l) => norm(l.name) === norm(local.name));
+      let destino = nube.lists.find((l) => l.id === local.id) || nube.lists.find((l) => norm(l.name) === norm(local.name) && !!l.privada === !!local.privada);
       if (!destino) {
         destino = { id: local.id, name: local.name, emoji: local.emoji, items: [] };
+        if (local.privada) destino.privada = true;
         nube.lists.push(destino);
       }
       for (const it of local.items) {
@@ -199,9 +229,10 @@
   }
 
   function alCambiarLaNube() {
-    if (COLECCIONES.some((c) => !nubeListo[c])) return;
+    if (FUENTES.some((f) => COLECCIONES.some((c) => !nubeListo[f][c]))) return;
     if (!nubeMigrada) { migrarAlaNube(); return; }
     const nube = estadoDeLaNube();
+    conservarPrivadas(nube);
     if (!nube.lists.some((l) => l.name === INBOX_NAME)) nube.lists.unshift({ id: uid(), name: INBOX_NAME, emoji: '📥', items: [] });
     state = nube;
     recordarSubido();
@@ -211,20 +242,33 @@
     render();
   }
 
-  function conectarListas(base) {
+  function conectarListas(base, baseMia) {
     nubeUnsubs.forEach((u) => { try { u(); } catch (e) {} });
     nubeUnsubs = [];
     nubeDB = base;
-    for (const c of COLECCIONES) { nubeListo[c] = false; nubeDocs[c] = []; }
+    miaDB = base ? baseMia : null;
+    miaOk = false;
+    for (const f of FUENTES) for (const c of COLECCIONES) { nubeListo[f][c] = false; nubeDocs[f][c] = []; }
     if (!base) { nubeMigrada = false; return; }
     nubeMigrada = (() => { try { return localStorage.getItem(claveMigrada()) === '1'; } catch (e) { return false; } })();
-    for (const col of COLECCIONES) {
-      nubeUnsubs.push(base.collection(col).onSnapshot((snap) => {
-        nubeDocs[col] = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
-        // Para juntar por primera vez esperamos la respuesta del servidor, no solo la caché
-        if (!snap.metadata.fromCache || nubeMigrada) nubeListo[col] = true;
-        alCambiarLaNube();
-      }, fallaNube));
+    for (const fuente of FUENTES) {
+      const b = fuente === 'casa' ? base : miaDB;
+      for (const col of COLECCIONES) {
+        if (!b) { nubeListo[fuente][col] = true; continue; }
+        nubeUnsubs.push(b.collection(col).onSnapshot((snap) => {
+          nubeDocs[fuente][col] = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+          if (fuente === 'mia' && !snap.metadata.fromCache) miaOk = true;
+          // Para juntar por primera vez esperamos la respuesta del servidor, no solo la caché
+          if (!snap.metadata.fromCache || nubeMigrada) nubeListo[fuente][col] = true;
+          alCambiarLaNube();
+        }, (e) => {
+          if (fuente === 'casa') { fallaNube(e); return; }
+          // Sin permiso en lo privado (faltan las reglas nuevas): seguimos sin listas privadas en la nube
+          miaOk = false;
+          for (const c of COLECCIONES) nubeListo.mia[c] = true;
+          alCambiarLaNube();
+        }));
+      }
     }
   }
 
@@ -1263,7 +1307,7 @@
     let hogarActual = null;
     N.onChange(() => {
       const id = N.estado === 'dentro' && N.hogar ? N.hogar.id : null;
-      if (id !== hogarActual) { hogarActual = id; conectarListas(id ? N.db() : null); }
+      if (id !== hogarActual) { hogarActual = id; conectarListas(id ? N.db() : null, id && N.dbMia ? N.dbMia() : null); }
       renderCloud();
     });
     N.onMiembros(() => { renderCloud(); render(); });

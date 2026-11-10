@@ -15,7 +15,7 @@ mande (en la lista: ⋯ → «📋 Copiar o compartir la lista») y pasar aquí 
 3. [x] **Quién y cuándo**: hecho y comprobado en los dos móviles (versión 0.10). Quién, cuándo y la etiqueta se guardan en `detalles`, aparte de `items`, para que una Dilo antigua abierta en otro sitio no los borre.
 4. [x] **Las listas se ajustan a la pantalla** *Hecho en la versión 0.9.*: que la pantalla de inicio quepa siempre sin desplazarse; cuantas más listas haya, más pequeñas se hacen las tarjetas (y si no caben, quitar primero las cosas de vista previa y luego pasar a 3 columnas o a filas compactas).
 5. [x] **Borrar por voz** *Hecho en la versión 0.12.*: «quita la leche de la compra», «borra pan», «elimina tomates y tarta de queso» (borra, con «Deshacer»); «tacha el pan», «marca la leche como hecha» (lo marca como hecho). Encuentra la cosa aunque no se diga igual. Si no encuentra nada, pregunta si se quiere apuntar como algo nuevo (por si era «quitar el polvo»).
-6. [ ] **Listas privadas**: al crear o editar una lista, poder marcarla como «Solo para mí»: solo la ve quien la creó, en su móvil y con su cuenta (no la ve el resto de la casa). Las demás siguen compartidas. Hay que cambiar también las reglas de Firebase.
+6. [ ] **Listas privadas** *(en curso: la sincronización con el sitio privado `usuarios/{uid}` ya está hecha en la rama; faltan los botones, el candado, las reglas de Firebase y probarlo)*: al crear o editar una lista, poder marcarla como «Solo para mí»: solo la ve quien la creó, en su móvil y con su cuenta (no la ve el resto de la casa). Las demás siguen compartidas. Hay que cambiar también las reglas de Firebase.
 7. [x] **Nuevo icono de la app** *Hecho en la versión 0.12*: «Lista con micro» en azul noche con DILOBARRI (opción D). Puede tardar en cambiar en la pantalla del móvil; si no, desinstalar e instalar Dilo otra vez.
 8. [ ] **Apuntar citas con la voz**: «cita con el dentista el martes a las 10 para Julia» → se guarda en Mi agenda con fecha, hora, lugar y persona, y llega la notificación de confirmación.
 9. [ ] **Recetas dentro de Dilo**, igual que se ha hecho con la agenda (copiar «Recetas de Karlos Bernal» y «Comidas de la semana»).
@@ -24,6 +24,7 @@ mande (en la lista: ⋯ → «📋 Copiar o compartir la lista») y pasar aquí 
 12. [ ] **Avisos de citas con la app cerrada**: ahora solo saltan con Dilo abierta. Con la nube se pueden mandar notificaciones de verdad (o seguir usando «Añadir al calendario del móvil»).
 
 ## Por revisar
+- [ ] Decidir cómo se ven las listas: **Tarjetas** o **Filas**, y qué colores (Vivos, Pastel, Profundos, Degradados). De momento se puede elegir en «?» para probar.
 - [ ] Probar la voz en el móvil real con la versión 0.5.1 (crear lista y apuntar en la misma frase, apuntar en una lista, notificación).
 - [ ] Listas cuyo nombre lleva «con» (por ejemplo «Cena con amigos»): por voz se entiende como «lista Cena» + «amigos». De momento crearlas con el botón «+ Nueva lista».
 - [ ] «Crea una lista de ferretería tornillos y tacos» (sin «y apunta» o «con») mete todo en el nombre. Pensar si la app puede preguntar en estos casos.

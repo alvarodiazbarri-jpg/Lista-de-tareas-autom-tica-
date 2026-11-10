@@ -122,11 +122,9 @@ async function alEntrar() {
 // Base de datos de la casa, con la misma forma que la de «Mi agenda» en Claude:
 // db.collection('citas').doc(id).set(datos) / .delete() / .onSnapshot(fn, err)
 // db.doc('ajustes/general').set(datos) / .onSnapshot(fn, err)
-function baseDeLaCasa() {
-  if (!hogar) return null;
-  const base = ['hogares', hogar.id];
+function baseEn(base, hogarId) {
   return {
-    hogarId: hogar.id,
+    hogarId,
     collection(nombre) {
       return {
         doc(id) {
@@ -172,6 +170,14 @@ function persona(email) {
   };
 }
 
+function baseDeLaCasa() {
+  return hogar ? baseEn(['hogares', hogar.id], hogar.id) : null;
+}
+// Lo privado de cada persona (listas «Solo para mí»): usuarios/{uid}, que solo puede leer esa persona
+function baseMia() {
+  return user ? baseEn(['usuarios', user.uid], hogar ? hogar.id : '') : null;
+}
+
 const api = {
   get estado() { return estado; },
   get usuario() { return user ? { correo: correo(), nombre: user.displayName || '', foto: user.photoURL || '' } : null; },
@@ -179,6 +185,7 @@ const api = {
   get hogares() { return hogares; },
   get error() { return ultimoError; },
   db: baseDeLaCasa,
+  dbMia: baseMia,
   persona,
   // Versión de Dilo que usó cada persona la última vez ('' si es anterior a la 0.8)
   versionDe(email) { const p = perfiles.get((email || '').toLowerCase()); return p ? (p.version || '0.8') : ''; },
