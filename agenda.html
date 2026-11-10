@@ -110,6 +110,9 @@ h2.grp{font-size:15px;font-weight:700;color:var(--muted);margin:18px 0 8px;lette
 #lista .item .t{font-size:16px}
 #lista .item .s{font-size:14px;opacity:.85}
 .det h4,.dato span:last-child{text-transform:uppercase}
+.av{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;overflow:hidden;vertical-align:-5px;margin-right:6px;
+  background:var(--pc,#6B7785);color:#fff;font-size:12px;font-weight:700}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
 .vacio{text-align:center;color:var(--muted);padding:48px 20px}
 .vacio b{display:block;color:var(--ink);font-size:19px;margin-bottom:6px}
 
@@ -482,6 +485,7 @@ async function iniciarSync(){
     conectada = id;
     if (!id) return;
     DB = N.db();
+    if (N.onMiembros) N.onMiembros(() => render());
     ponModo('☁️ Sincronizada con la familia', true);
     const err = e => ponModo(e && e.code==='permission-denied' ? 'No tienes permiso en esta casa.' : 'Sin conexión con la nube. Lo apuntado se subirá al volver la red.', false);
     DB.collection('familia').onSnapshot(snap => aplica('familia', snap), err);
@@ -493,6 +497,40 @@ async function iniciarSync(){
       aplicaAj(); render();
     }, err);
   });
+}
+
+/* quién apuntó cada cita y cuándo (con la nube de Dilo) */
+const yo = () => { const N = window.DiloNube; return N && N.usuario ? N.usuario.correo : ''; };
+function persona(correo){
+  const N = window.DiloNube;
+  return (N && N.persona && N.compartida && correo) ? N.persona(correo) : null;
+}
+function cuando(ts){
+  if (!ts) return '';
+  const min = Math.floor((Date.now() - ts)/60000);
+  if (min < 1) return 'Ahora mismo';
+  if (min < 60) return `Hace ${min} min`;
+  const d = new Date(ts), hoy = new Date(), ayer = new Date(); ayer.setDate(ayer.getDate()-1);
+  const hora = d.toLocaleTimeString('es-ES',{hour:'numeric',minute:'2-digit'});
+  if (d.toDateString()===hoy.toDateString()) return `Hoy ${hora}`;
+  if (d.toDateString()===ayer.toDateString()) return `Ayer ${hora}`;
+  const f = d.toLocaleDateString('es-ES', d.getFullYear()===hoy.getFullYear() ? {day:'numeric',month:'short'} : {day:'numeric',month:'short',year:'numeric'}).replace('.','');
+  return `${f} ${hora}`;
+}
+function avatar(p){
+  const a = h('b',{class:'av',style:`--pc:${p.color}`,'aria-hidden':'true'});
+  if (p.foto){
+    const img = h('img',{src:p.foto,alt:'',referrerpolicy:'no-referrer'});
+    img.addEventListener('error', () => { img.remove(); a.textContent = p.inicial; });
+    a.append(img);
+  } else a.textContent = p.inicial;
+  return a;
+}
+// «Álvaro · Ayer 18:30» con su foto o inicial
+function quienCuando(correo, ts){
+  const p = persona(correo), t = cuando(ts);
+  if (!p && !t) return null;
+  return [p ? avatar(p) : null, [p ? p.nombre : '', t].filter(Boolean).join(' · ')];
 }
 
 function quien(a){ return a.de==='familia' ? FAMILIA : (miembros.find(m=>m.id===a.de) || NADIE); }
@@ -625,7 +663,14 @@ function tinta(hex){
   const L = .2126*f(n>>16&255) + .7152*f(n>>8&255) + .0722*f(n&255);
   return L > .179 ? '#111820' : '#FFFFFF';
 }
-function ponEstado(a, e){ a.estado = e; a.hecha = (e==='hecha'); guardar(); render(); }
+function ponEstado(a, e){
+  if (estadoDe(a) !== e){
+    // Guardar quién y cuándo la marcó como realizada o cancelada
+    if (e === 'pendiente'){ delete a.estadoPor; delete a.estadoEn; }
+    else { a.estadoEn = Date.now(); if (yo()) a.estadoPor = yo(); else delete a.estadoPor; }
+  }
+  a.estado = e; a.hecha = (e==='hecha'); guardar(); render();
+}
 function elegirEstado(a, despues){
   const d = $('#dlg'), act = estadoDe(a);
   const cierra = () => { d.classList.remove('open'); d.replaceChildren(); };
@@ -669,7 +714,8 @@ function fila(a){
   const dia = new Intl.DateTimeFormat('es-ES',{weekday:'short'}).format(startDate(a)).replace('.','');
   const conQuien = (a.persona && !a.titulo.toLowerCase().includes(a.persona.toLowerCase())) ? a.persona : '';
   const explica = [a.titulo, conQuien].filter(Boolean).join(' · ');
-  const pie = [cat.n, (a.fotos&&a.fotos.length) ? 'Foto' : ''].filter(Boolean).join(' · ');
+  const autor = persona(a.por);
+  const pie = [cat.n, (a.fotos&&a.fotos.length) ? 'Foto' : '', autor ? 'Apuntó '+autor.nombre : ''].filter(Boolean).join(' · ');
   return h('div',{class:'item '+est,style:`--c:${w.c};--t:${tinta(w.c)}`},
     h('button',{class:'main',type:'button',onclick:()=>abrirDetalle(a.id)},
       h('span',{class:'fecha'},
@@ -879,7 +925,9 @@ function abrirDetalle(id){
       dato('Lugar', a.lugar, h('a',{href:'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a.lugar),target:'_blank',rel:'noopener',style:'display:block;color:var(--accent);font-weight:700;margin-top:4px',text:'Abrir en mapas'})),
       dato('Con', a.persona),
       dato('Notas', a.notas),
-      dato('Aviso', avisoTxt(a))),
+      dato('Aviso', avisoTxt(a)),
+      dato('Apuntada', quienCuando(a.por, a.creada)),
+      estadoDe(a)!=='pendiente' ? dato(estadoDe(a)==='hecha' ? 'Realizada' : 'Cancelada', quienCuando(a.estadoPor, a.estadoEn)) : null),
     (a.fotos&&a.fotos.length) ? h('div',{style:'margin-top:14px'}, h('b',{text:'Fotos'}), fotos) : null,
     h('a',{class:'btn pri',href:linkGoogle(a),target:'_blank',rel:'noopener',text:'Añadir al calendario del móvil'}),
     h('button',{class:'btn est '+estadoDe(a),text:'Estado: '+ETQ[estadoDe(a)].toUpperCase()+' · cambiar',onclick:()=>elegirEstado(a,()=>abrirDetalle(a.id))}),
@@ -1000,7 +1048,7 @@ async function abrirForm(id, fechaIni){
       const quitadas = (orig.fotos||[]).filter(x=>!d.fotos.includes(x));
       appts[appts.findIndex(x=>x.id===d.id)] = d;
       quitadas.filter(x=>!fotoEnUso(x)).forEach(delFoto);
-    } else appts.push(d);
+    } else { d.creada = Date.now(); if (yo()) d.por = yo(); appts.push(d); }
     nuevas.length = 0; guardar(); cerrarHoja();
     toast(orig ? 'Cambios guardados' : 'Cita guardada');
     if (!orig) notificar('✅ Apuntado en Mi agenda', `${d.titulo} · ${fmtLargo(d)}${d.hora?' · '+d.hora:''}\nToca para revisarlo`, d.id);
@@ -1125,7 +1173,8 @@ async function abrirImportar(){
       btnAdd.disabled = true; let n = 0; const lote = [];
       for (const p of props.filter(x=>x.sel)){
         if (!p.titulo.trim() || !p.fecha) continue;
-        const d = {id:uid(),titulo:may(p.titulo),cat:p.cat,fecha:p.fecha,hora:p.hora||'',lugar:p.lugar,persona:p.persona,notas:p.notas,aviso:p.fecha<hoy?'none':'1d',de:p.de||'',fotos:[]};
+        const d = {id:uid(),titulo:may(p.titulo),cat:p.cat,fecha:p.fecha,hora:p.hora||'',lugar:p.lugar,persona:p.persona,notas:p.notas,aviso:p.fecha<hoy?'none':'1d',de:p.de||'',fotos:[],creada:Date.now()};
+        if (yo()) d.por = yo();
         if (adj.checked && p.src){
           if (!p.src.fid){ p.src.fid = uid(); await putFoto(p.src.fid, p.src.blob); }
           d.fotos = [p.src.fid];
@@ -1397,6 +1446,6 @@ if ('serviceWorker' in navigator){
 }
 })();
 </script>
-<script type="module" src="js/nube.js?v=0.6"></script>
+<script type="module" src="js/nube.js?v=0.8"></script>
 </body>
 </html>
