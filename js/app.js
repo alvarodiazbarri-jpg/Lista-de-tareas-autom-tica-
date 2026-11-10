@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.16';
+  const VERSION = '0.17';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -1466,6 +1466,7 @@
     N.onChange(() => {
       const id = N.estado === 'dentro' && N.hogar ? N.hogar.id : null;
       if (N.estado === 'fuera' || N.estado === 'sin-casa') marcarListo();
+      if (typeof renderGtasks === 'function') renderGtasks();
       if (id !== hogarActual) { hogarActual = id; conectarListas(id ? N.db() : null, id && N.dbMia ? N.dbMia() : null); }
       renderCloud();
     });
@@ -1509,6 +1510,80 @@
       handleInput(pendiente);
     });
   }
+
+  // ---- Recoger lo dictado a «Hey Google» (Google Tasks) ----
+  // «Hey Google, recuérdame comprar pilas» (con el móvil bloqueado) lo guarda en Google Tasks, en
+  // «Mis tareas». Al abrir Dilo se traen esas tareas, se apuntan como si se dijeran y en Google
+  // Tasks se marcan como hechas para no traerlas dos veces.
+  const GT_KEY = 'dilo:gtasks';
+  const gtActivo = () => { try { return localStorage.getItem(GT_KEY) === '1'; } catch (e) { return false; } };
+  let recogiendo = false;
+  function renderGtasks() {
+    const N = window.DiloNube;
+    const dentro = N && N.estado === 'dentro';
+    $('gtasksBtn').textContent = gtActivo() ? '🎙️ Recoger lo dictado a «Hey Google»: activado (toca para quitarlo)'
+      : '🎙️ Recoger lo que dicte a «Hey Google» (Google Tasks)';
+    $('gtasksBanner').hidden = !(gtActivo() && dentro && N.tokenTasksGuardado && !N.tokenTasksGuardado());
+  }
+  async function recogerDeGoogle(conToque) {
+    const N = window.DiloNube;
+    if (!gtActivo() || recogiendo || !N || N.estado !== 'dentro' || !N.tokenTasksGuardado) return;
+    recogiendo = true;
+    try {
+      let token = N.tokenTasksGuardado();
+      if (!token && conToque) token = await N.pedirTokenTasks();
+      if (!token) { renderGtasks(); return; }
+      const api = 'https://tasks.googleapis.com/tasks/v1/lists/@default/tasks';
+      const r = await fetch(`${api}?showCompleted=false&showHidden=false&maxResults=100`, { headers: { Authorization: 'Bearer ' + token } });
+      if (r.status === 401) { N.olvidarTokenTasks(); renderGtasks(); if (conToque) toast('Vuelve a tocar para dar permiso a Dilo'); return; }
+      if (!r.ok) {
+        const txt = await r.text();
+        toast(/has not been used|is disabled|SERVICE_DISABLED/i.test(txt) ? '⚠️ Falta activar «Google Tasks API» en la consola de Google'
+          : '⚠️ No se pudo leer Google Tasks (' + r.status + ')');
+        return;
+      }
+      const datos = await r.json();
+      const tareas = (datos.items || []).filter((t) => t.status !== 'completed' && (t.title || '').trim())
+        .sort((a, b) => (a.position || '').localeCompare(b.position || ''));
+      if (!tareas.length) { if (conToque) toast('🎙️ No hay nada nuevo dictado a «Hey Google»'); return; }
+      for (const t of tareas) {
+        handleInput(t.title.trim());
+        // En Google Tasks queda como hecha (no se borra, por si acaso)
+        fetch(`${api}/${encodeURIComponent(t.id)}`, {
+          method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'completed' }),
+        }).catch(() => {});
+      }
+      toast(tareas.length === 1 ? `🎙️ Recogido de «Hey Google»: «${tareas[0].title.trim()}»` : `🎙️ ${tareas.length} cosas recogidas de «Hey Google»`);
+    } catch (e) {
+      const c = e && e.code;
+      if (c === 'auth/popup-blocked') toast('⚠️ El móvil bloqueó la ventana de Google. Vuelve a tocar.');
+      else if (c !== 'auth/popup-closed-by-user' && c !== 'auth/cancelled-popup-request') toast('⚠️ No se pudo conectar con Google Tasks. ' + (c || (e && e.message) || ''));
+    } finally {
+      recogiendo = false;
+      renderGtasks();
+    }
+  }
+  $('gtasksBtn').addEventListener('click', async () => {
+    const N = window.DiloNube;
+    if (gtActivo()) {
+      try { localStorage.setItem(GT_KEY, '0'); } catch (e) {}
+      if (N && N.olvidarTokenTasks) N.olvidarTokenTasks();
+      renderGtasks();
+      toast('Ya no se recoge lo de «Hey Google»');
+      return;
+    }
+    if (!N || N.estado !== 'dentro') { toast('Primero entra con Google en ☁️ (la misma cuenta que usa «Hey Google»)'); return; }
+    try { localStorage.setItem(GT_KEY, '1'); } catch (e) {}
+    renderGtasks();
+    await recogerDeGoogle(true);
+  });
+  $('gtasksBanner').addEventListener('click', () => recogerDeGoogle(true));
+  // Al abrir Dilo y al volver a ella: se recoge solo si el permiso sigue vigente; si no, sale el aviso
+  cuandoListo(() => { renderGtasks(); recogerDeGoogle(false); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && listoYa) { renderGtasks(); recogerDeGoogle(false); }
+  });
 
   // Botón fijo «Toca para apuntar» en las notificaciones (opciones iguales que en sw.js)
   const FIJO_KEY = 'dilo:fijo';
