@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.12';
+  const VERSION = '0.13';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -786,7 +786,8 @@
       const tile = el('button', { class: 'tile', type: 'button', style: estiloTarjeta(l), 'aria-label': `${l.name}, ${pend.length} pendientes` },
         el('span', { class: 'tile-emoji', text: l.emoji }),
         el('span', { class: 'tile-foot' },
-          el('span', { class: 'tile-name', text: l.name }),
+          el('span', { class: 'tile-name' }, l.name,
+            el('span', { class: 'tile-sub', text: pend.length ? (pend.length === 1 ? '1 pendiente' : `${pend.length} pendientes`) : 'Vacía' })),
           el('span', { class: 'tile-count' + (pend.length ? ' has' : ''), text: String(pend.length) })));
       tile.addEventListener('click', () => { openList(l.id); });
       wrap.appendChild(tile);
@@ -810,6 +811,17 @@
     const abajo = window.innerHeight - document.querySelector('.dock').offsetHeight - 10;
     const hueco = abajo - arriba;
     const alto = (c) => { const filas = Math.ceil(tiles.length / c); return (hueco - gap * (filas - 1)) / filas; };
+    // Vista «Filas»: una fila ancha por lista, como las citas de Mi agenda
+    grid.classList.toggle('filas-anchas', vista === 'filas');
+    if (vista === 'filas') {
+      const hf = Math.floor(Math.max(56, Math.min(84, (hueco - gap * (tiles.length - 1)) / tiles.length)));
+      grid.style.gridTemplateColumns = '1fr';
+      grid.style.gridAutoRows = hf + 'px';
+      grid.style.setProperty('--fh', hf + 'px');
+      grid.classList.toggle('con-sub', hf >= 64);
+      grid.classList.remove('mini', 'fila');
+      return;
+    }
     const ancha = window.innerWidth >= 560;
     const formas = FORMAS.map(([c, min, estilo]) => [ancha && c === 2 && !estilo ? 3 : c, min, estilo]);
     // La primera forma que quepa sin desplazarse; si ninguna cabe, la más pequeña
@@ -1022,7 +1034,25 @@
 
   // ---------- Acciones de lista ----------
   $('backBtn').addEventListener('click', () => { currentListId = null; render(); window.scrollTo(0, 0); });
-  $('helpBtn').addEventListener('click', () => { renderPaletas(); $('helpDialog').showModal(); });
+  $('helpBtn').addEventListener('click', () => { renderVistas(); renderPaletas(); $('helpDialog').showModal(); });
+
+  // Elegir cómo se ven las listas: tarjetas o filas (se guarda en este móvil)
+  const VISTA_KEY = 'dilo:vista';
+  let vista = (() => { try { return localStorage.getItem(VISTA_KEY) === 'filas' ? 'filas' : 'tarjetas'; } catch (e) { return 'tarjetas'; } })();
+  function renderVistas() {
+    const box = $('vistas');
+    box.replaceChildren();
+    for (const [id, n, dibujo] of [['tarjetas', 'Tarjetas', '▦'], ['filas', 'Filas', '☰']]) {
+      const b = el('button', { class: 'pal pal-vista', type: 'button', 'aria-pressed': String(id === vista) },
+        el('span', { class: 'pal-dibujo', text: dibujo }), el('span', { text: n }));
+      b.addEventListener('click', () => {
+        vista = id;
+        try { localStorage.setItem(VISTA_KEY, id); } catch (e) {}
+        renderVistas(); render();
+      });
+      box.append(b);
+    }
+  }
 
   // Elegir los colores de las listas (se guarda en este móvil)
   function renderPaletas() {

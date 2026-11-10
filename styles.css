@@ -234,6 +234,28 @@ main, .home-head, .list-head {
 .tiles.fila .tile-foot { flex: 1; display: flex; align-items: center; gap: 8px; }
 .tiles.fila .tile-name { flex: 1; text-align: left; font-size: .95rem; }
 .tiles.fila .tile-count { position: static; }
+.tile-sub { display: none; }
+/* Vista «Filas»: como las citas de Mi agenda */
+.tiles.filas-anchas { gap: 10px; }
+.tiles.filas-anchas .tile { flex-direction: row; align-items: center; gap: 14px; padding: 8px 8px 8px 10px; border-radius: 18px; }
+.tiles.filas-anchas .tile-emoji {
+  flex: none; width: min(calc(var(--fh, 76px) - 18px), 60px); height: min(calc(var(--fh, 76px) - 18px), 60px);
+  border-radius: 12px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .25); filter: none;
+  font-size: calc(min(calc(var(--fh, 76px) - 18px), 60px) * .58);
+}
+.tiles.filas-anchas .tile-foot { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tiles.filas-anchas .tile-name { flex: 1; text-align: left; font-size: 1.2rem; text-transform: uppercase; letter-spacing: .01em; }
+.tiles.filas-anchas.con-sub .tile-sub {
+  display: block; margin-top: 2px; font-family: var(--font-body); font-size: .8rem; font-weight: 400;
+  text-transform: none; letter-spacing: 0; opacity: .85; text-shadow: none;
+}
+.tiles.filas-anchas .tile-count {
+  position: static; flex: none; width: 58px; height: min(calc(var(--fh, 76px) - 18px), 60px); border-radius: 14px;
+  border: 3px solid var(--tile-t, #fff); background: rgb(0 0 0 / .16); color: var(--tile-t, #fff); font-size: 1.35rem;
+}
+.tiles.filas-anchas .tile-count.has { background: var(--tile-t, #fff); color: var(--hue); }
+.pal-vista { grid-template-columns: auto 1fr; align-items: center; }
+.pal-dibujo { font-size: 1.5rem; line-height: 1; }
 .sec-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
 .sec-row .sec-title { margin: 0 2px; }
 .sec-add {

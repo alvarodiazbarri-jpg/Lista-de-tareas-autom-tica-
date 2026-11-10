@@ -237,6 +237,28 @@ main, .home-head, .list-head {
 .tiles.fila .tile-foot { flex: 1; display: flex; align-items: center; gap: 8px; }
 .tiles.fila .tile-name { flex: 1; text-align: left; font-size: .95rem; }
 .tiles.fila .tile-count { position: static; }
+.tile-sub { display: none; }
+/* Vista «Filas»: como las citas de Mi agenda */
+.tiles.filas-anchas { gap: 10px; }
+.tiles.filas-anchas .tile { flex-direction: row; align-items: center; gap: 14px; padding: 8px 8px 8px 10px; border-radius: 18px; }
+.tiles.filas-anchas .tile-emoji {
+  flex: none; width: min(calc(var(--fh, 76px) - 18px), 60px); height: min(calc(var(--fh, 76px) - 18px), 60px);
+  border-radius: 12px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .25); filter: none;
+  font-size: calc(min(calc(var(--fh, 76px) - 18px), 60px) * .58);
+}
+.tiles.filas-anchas .tile-foot { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tiles.filas-anchas .tile-name { flex: 1; text-align: left; font-size: 1.2rem; text-transform: uppercase; letter-spacing: .01em; }
+.tiles.filas-anchas.con-sub .tile-sub {
+  display: block; margin-top: 2px; font-family: var(--font-body); font-size: .8rem; font-weight: 400;
+  text-transform: none; letter-spacing: 0; opacity: .85; text-shadow: none;
+}
+.tiles.filas-anchas .tile-count {
+  position: static; flex: none; width: 58px; height: min(calc(var(--fh, 76px) - 18px), 60px); border-radius: 14px;
+  border: 3px solid var(--tile-t, #fff); background: rgb(0 0 0 / .16); color: var(--tile-t, #fff); font-size: 1.35rem;
+}
+.tiles.filas-anchas .tile-count.has { background: var(--tile-t, #fff); color: var(--hue); }
+.pal-vista { grid-template-columns: auto 1fr; align-items: center; }
+.pal-dibujo { font-size: 1.5rem; line-height: 1; }
 .sec-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
 .sec-row .sec-title { margin: 0 2px; }
 .sec-add {
@@ -570,6 +592,8 @@ dialog li { margin-bottom: 6px; }
     <p>Si no hay conexión o el navegador no reconoce la voz, se graba el audio y lo encontrarás en la Bandeja de entrada.</p>
     <p>Al guardar una cita en <b>Mi agenda</b> te llega una <b>notificación</b> confirmándolo. En las listas no hace falta: lo ves en la pantalla al momento.</p>
     <p>En <b>⋯</b> de cada cosa apuntada puedes ponerle una <b>etiqueta</b> (urgente, informativa, curiosidad); las urgentes salen arriba.</p>
+    <h2 class="help-sub">Cómo se ven las listas</h2>
+    <div id="vistas" class="paletas"></div>
     <h2 class="help-sub">Colores de las listas</h2>
     <div id="paletas" class="paletas"></div>
     <button id="notifyBtn" type="button" class="ghost-btn notify-btn">🔔 Activar notificaciones</button>
@@ -854,7 +878,7 @@ dialog li { margin-bottom: 6px; }
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.12';
+  const VERSION = '0.13';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -1637,7 +1661,8 @@ dialog li { margin-bottom: 6px; }
       const tile = el('button', { class: 'tile', type: 'button', style: estiloTarjeta(l), 'aria-label': `${l.name}, ${pend.length} pendientes` },
         el('span', { class: 'tile-emoji', text: l.emoji }),
         el('span', { class: 'tile-foot' },
-          el('span', { class: 'tile-name', text: l.name }),
+          el('span', { class: 'tile-name' }, l.name,
+            el('span', { class: 'tile-sub', text: pend.length ? (pend.length === 1 ? '1 pendiente' : `${pend.length} pendientes`) : 'Vacía' })),
           el('span', { class: 'tile-count' + (pend.length ? ' has' : ''), text: String(pend.length) })));
       tile.addEventListener('click', () => { openList(l.id); });
       wrap.appendChild(tile);
@@ -1661,6 +1686,17 @@ dialog li { margin-bottom: 6px; }
     const abajo = window.innerHeight - document.querySelector('.dock').offsetHeight - 10;
     const hueco = abajo - arriba;
     const alto = (c) => { const filas = Math.ceil(tiles.length / c); return (hueco - gap * (filas - 1)) / filas; };
+    // Vista «Filas»: una fila ancha por lista, como las citas de Mi agenda
+    grid.classList.toggle('filas-anchas', vista === 'filas');
+    if (vista === 'filas') {
+      const hf = Math.floor(Math.max(56, Math.min(84, (hueco - gap * (tiles.length - 1)) / tiles.length)));
+      grid.style.gridTemplateColumns = '1fr';
+      grid.style.gridAutoRows = hf + 'px';
+      grid.style.setProperty('--fh', hf + 'px');
+      grid.classList.toggle('con-sub', hf >= 64);
+      grid.classList.remove('mini', 'fila');
+      return;
+    }
     const ancha = window.innerWidth >= 560;
     const formas = FORMAS.map(([c, min, estilo]) => [ancha && c === 2 && !estilo ? 3 : c, min, estilo]);
     // La primera forma que quepa sin desplazarse; si ninguna cabe, la más pequeña
@@ -1873,7 +1909,25 @@ dialog li { margin-bottom: 6px; }
 
   // ---------- Acciones de lista ----------
   $('backBtn').addEventListener('click', () => { currentListId = null; render(); window.scrollTo(0, 0); });
-  $('helpBtn').addEventListener('click', () => { renderPaletas(); $('helpDialog').showModal(); });
+  $('helpBtn').addEventListener('click', () => { renderVistas(); renderPaletas(); $('helpDialog').showModal(); });
+
+  // Elegir cómo se ven las listas: tarjetas o filas (se guarda en este móvil)
+  const VISTA_KEY = 'dilo:vista';
+  let vista = (() => { try { return localStorage.getItem(VISTA_KEY) === 'filas' ? 'filas' : 'tarjetas'; } catch (e) { return 'tarjetas'; } })();
+  function renderVistas() {
+    const box = $('vistas');
+    box.replaceChildren();
+    for (const [id, n, dibujo] of [['tarjetas', 'Tarjetas', '▦'], ['filas', 'Filas', '☰']]) {
+      const b = el('button', { class: 'pal pal-vista', type: 'button', 'aria-pressed': String(id === vista) },
+        el('span', { class: 'pal-dibujo', text: dibujo }), el('span', { text: n }));
+      b.addEventListener('click', () => {
+        vista = id;
+        try { localStorage.setItem(VISTA_KEY, id); } catch (e) {}
+        renderVistas(); render();
+      });
+      box.append(b);
+    }
+  }
 
   // Elegir los colores de las listas (se guarda en este móvil)
   function renderPaletas() {
@@ -2129,4 +2183,4 @@ dialog li { margin-bottom: 6px; }
   }, 60000);
 })();
 </script>
-  <script type="module" src="js/nube.js?v=0.12"></script>
+  <script type="module" src="js/nube.js?v=0.13"></script>
