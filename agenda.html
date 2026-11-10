@@ -400,7 +400,7 @@ const tipoDe = a => CATS[a.cat] || {n:'Sin tipo', c:'#6B7785'};
 const tiposTxt = () => Object.entries(CATS).map(([k,v]) => `${k}=${v.n}`).join('; ');
 function volcarAj(){
   if (!DB || soloLectura) return;
-  const c = JSON.stringify(ajustes); if (c === ajGuardado) return;
+  const c = JSON.stringify(ajustes); if (c === ajGuardado && volcarAj.hecho) return; volcarAj.hecho = true;
   ajGuardado = c; const body = clona(ajustes);
   colaEscritura = colaEscritura.then(async () => {
     for (let i=0; i<2; i++){
@@ -449,9 +449,9 @@ function aplica(col, snap){
 async function migrar(){
   if (migrado || !listos.citas || !listos.familia) return;
   migrado = true;
-  let hecho = false; try { hecho = localStorage.getItem('agenda:sync1')==='1'; } catch(e){}
+  let hecho = false; try { hecho = localStorage.getItem('agenda:nube1')==='1'; } catch(e){}
   if (hecho) return;
-  const marca = () => { try { localStorage.setItem('agenda:sync1','1'); } catch(e){} };
+  const marca = () => { try { localStorage.setItem('agenda:nube1','1'); } catch(e){} };
   const nuevasC = localInicial.citas.filter(c => c && c.id && !appts.some(a=>a.id===c.id));
   const nuevasM = localInicial.miembros.filter(m => m && m.id && !miembros.some(x=>x.id===m.id));
   if (!localInicial.citas.length || (!nuevasC.length && !nuevasM.length) || soloLectura){ marca(); return; }
@@ -462,8 +462,37 @@ async function migrar(){
   toast(`Pasadas ${nuevasC.length} ${nuevasC.length===1?'cita':'citas'} a la agenda compartida`);
 }
 async function iniciarSync(){
-  // En Dilo la agenda se guarda en este móvil (la sincronización en la nube vendrá después)
-  ponModo('', true);
+  // Espera a la nube de Dilo (js/nube.js). Si no hay sesión, la agenda se guarda solo en este móvil.
+  const N = await new Promise(res => {
+    if (window.DiloNube) return res(window.DiloNube);
+    const t = setTimeout(() => res(null), 8000);
+    window.addEventListener('dilonube', () => { clearTimeout(t); res(window.DiloNube); }, {once:true});
+  });
+  if (!N){ ponModo('Solo se guarda en este móvil.', false); return; }
+  let conectada = null;
+  N.onChange(() => {
+    const id = N.estado==='dentro' && N.hogar ? N.hogar.id : null;
+    if (conectada === null && !id){
+      ponModo(N.estado==='cargando' ? 'Conectando con la nube…' : 'Solo se guarda en este móvil. Para compartirla, entra con Google en la pantalla de listas de Dilo (☁️).', false);
+      if (N.estado==='cargando') return;
+      conectada = ''; return;
+    }
+    if (id === conectada) return;
+    if (conectada !== null && conectada !== ''){ location.reload(); return; }  // cambió la sesión o la casa
+    conectada = id;
+    if (!id) return;
+    DB = N.db();
+    ponModo('☁️ Sincronizada con la familia', true);
+    const err = e => ponModo(e && e.code==='permission-denied' ? 'No tienes permiso en esta casa.' : 'Sin conexión con la nube. Lo apuntado se subirá al volver la red.', false);
+    DB.collection('familia').onSnapshot(snap => aplica('familia', snap), err);
+    DB.collection('citas').onSnapshot(snap => aplica('citas', snap), err);
+    DB.doc('ajustes/general').onSnapshot(snap => {
+      if (!snap.exists) { volcarAj(); return; }
+      ajustes = ajNorm(snap.data()); ajGuardado = JSON.stringify(ajustes);
+      try { localStorage.setItem(KEYA, JSON.stringify(ajustes)); } catch(e){}
+      aplicaAj(); render();
+    }, err);
+  });
 }
 
 function quien(a){ return a.de==='familia' ? FAMILIA : (miembros.find(m=>m.id===a.de) || NADIE); }
@@ -1147,7 +1176,7 @@ async function abrirImportar(){
 }
 
 /* recuperar lo guardado solo en este móvil */
-function yaPasado(){ try { return localStorage.getItem('agenda:sync1')==='1'; } catch(e){ return false; } }
+function yaPasado(){ try { return localStorage.getItem('agenda:nube1')==='1'; } catch(e){ return false; } }
 async function recuperar(){
   const viejas = (leeJSON(KEY) || []).filter(c => c && c.id && c.titulo && c.fecha);
   if (!viejas.length){ toast('No hay citas antiguas guardadas en este móvil.'); return; }
@@ -1159,7 +1188,7 @@ async function recuperar(){
   vm.filter(m => m && m.id && !miembros.some(x=>x.id===m.id)).forEach(m => miembros.push(m));
   nuevas.forEach(c => appts.push(c));
   guardarM(); guardar(); render();
-  try { localStorage.setItem('agenda:sync1','1'); } catch(e){}
+  try { localStorage.setItem('agenda:nube1','1'); } catch(e){}
   if (sheet.classList.contains('open')) cerrarHoja();
   toast(`Pasadas ${nuevas.length} ${nuevas.length===1?'cita':'citas'} a la agenda`);
 }
@@ -1313,7 +1342,7 @@ function abrirMenu(){
         lote.push(nueva); n++;
       }
       for (const nueva of lote){ const i = appts.findIndex(x=>x.id===nueva.id); if (i>=0) appts[i]=nueva; else appts.push(nueva); }
-      guardar(); cerrarHoja(); toast(`Importadas ${n} citas`); try { localStorage.setItem('agenda:sync1','1'); } catch(e){}
+      guardar(); cerrarHoja(); toast(`Importadas ${n} citas`);
     }catch(e){ toast('Ese archivo no es una copia válida de la agenda'); }
     file.value='';
   });
@@ -1368,5 +1397,6 @@ if ('serviceWorker' in navigator){
 }
 })();
 </script>
+<script type="module" src="js/nube.js?v=0.6"></script>
 </body>
 </html>

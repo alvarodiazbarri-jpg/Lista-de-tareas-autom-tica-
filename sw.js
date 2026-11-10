@@ -1,5 +1,5 @@
 // Service worker: permite abrir la app sin conexión.
-const CACHE = 'dilo-v6';
+const CACHE = 'dilo-v7';
 const ASSETS = [
   './',
   'index.html',
@@ -7,6 +7,10 @@ const ASSETS = [
   'styles.css',
   'js/parser.js',
   'js/app.js',
+  'js/nube.js',
+  'js/vendor/firebase/firebase-app.js',
+  'js/vendor/firebase/firebase-auth.js',
+  'js/vendor/firebase/firebase-firestore.js',
   'manifest.webmanifest',
   'icons/icon.svg',
   'icons/icon-192.png',
@@ -28,6 +32,11 @@ self.addEventListener('activate', (e) => {
 // Red primero (para recibir actualizaciones), caché si no hay conexión
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  // Solo los archivos de la propia app (y sus fuentes). Las conexiones con Google/Firebase van directas.
+  const url = new URL(e.request.url);
+  const propio = url.origin === self.location.origin;
+  const fuentes = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
+  if (!propio && !fuentes) return;
   e.respondWith(
     // no-cache: pregunta siempre a la web si hay versión nueva antes de usar la copia del navegador
     fetch(e.request, { cache: 'no-cache' })

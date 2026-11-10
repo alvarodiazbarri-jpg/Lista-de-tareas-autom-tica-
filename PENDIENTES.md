@@ -3,11 +3,11 @@
 Lista de mejoras para la app. Marca con [x] lo que esté hecho.
 
 ## Próximas (en este orden)
-1. [ ] **Guardar las listas y la agenda en la nube** (Firebase, gratis, de Google).
+1. [ ] **Guardar las listas y la agenda en la nube** (Firebase, gratis, de Google). *Hecho en la versión 0.6, falta probarlo en el móvil.*
    - Para ver lo mismo en varios móviles y no perder nada si se cambia de móvil o se borra el navegador.
    - Lo que tiene que hacer Álvaro: crear una cuenta gratuita de Firebase con su cuenta de Google (unos 10 minutos, con guía paso a paso).
    - Cada persona entra en Dilo con su cuenta de Google; solo la familia ve sus datos.
-2. [ ] **Compartir con mi mujer** (y con la familia): que ella instale Dilo en su móvil, entre con su cuenta de Google y veamos las mismas citas y listas. Lo que apunte uno aparece en el móvil del otro en segundos. Necesita el punto 1.
+2. [ ] **Compartir con mi mujer** (y con la familia) *Hecho en la versión 0.6 (☁️ → Invitar), falta probarlo.*: que ella instale Dilo en su móvil, entre con su cuenta de Google y veamos las mismas citas y listas. Lo que apunte uno aparece en el móvil del otro en segundos. Necesita el punto 1.
    - Elegir qué se comparte: la agenda seguro; ¿también la compra? ¿Las tareas e ideas de cada uno quedan privadas?
 3. [ ] **Apuntar citas con la voz**: «cita con el dentista el martes a las 10 para Julia» → se guarda en Mi agenda con fecha, hora, lugar y persona, y llega la notificación de confirmación.
 4. [ ] **Recetas dentro de Dilo**, igual que se ha hecho con la agenda (copiar «Recetas de Karlos Bernal» y «Comidas de la semana»).
@@ -16,6 +16,8 @@ Lista de mejoras para la app. Marca con [x] lo que esté hecho.
 7. [ ] **Avisos de citas con la app cerrada**: ahora solo saltan con Dilo abierta. Con la nube se pueden mandar notificaciones de verdad (o seguir usando «Añadir al calendario del móvil»).
 
 ## Por revisar
+- [ ] Listas privadas: ahora todo lo de Dilo se comparte con la casa. ¿Queremos que algunas listas (ideas, tareas personales) sean solo de uno?
+- [ ] Las notas de voz grabadas (audio) se quedan en el móvil donde se grabaron; en el otro móvil se ve el apunte pero no se puede escuchar.
 - [ ] Probar la voz en el móvil real con la versión 0.5.1 (crear lista y apuntar en la misma frase, apuntar en una lista, notificación).
 - [ ] Listas cuyo nombre lleva «con» (por ejemplo «Cena con amigos»): por voz se entiende como «lista Cena» + «amigos». De momento crearlas con el botón «+ Nueva lista».
 - [ ] «Crea una lista de ferretería tornillos y tacos» (sin «y apunta» o «con») mete todo en el nombre. Pensar si la app puede preguntar en estos casos.

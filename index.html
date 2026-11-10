@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=0.5.1">
+  <link rel="stylesheet" href="styles.css?v=0.6">
 </head>
 <body>
   <header class="topbar">
@@ -23,6 +23,11 @@
   <main id="main">
     <!-- Vista: todas las listas -->
     <section id="homeView">
+      <button id="cloudCard" class="cloud-card" type="button" hidden>
+        <span class="cloud-icon" aria-hidden="true">☁️</span>
+        <span class="cloud-text"><b id="cloudTitle"></b><span id="cloudSub"></span></span>
+        <span class="cloud-go" aria-hidden="true">›</span>
+      </button>
       <div id="lists" class="lists"></div>
       <button id="newListBtn" class="ghost-btn">+ Nueva lista</button>
     </section>
@@ -75,6 +80,14 @@
     <p id="version" class="version"></p>
   </dialog>
 
+  <dialog id="cloudDialog">
+    <div class="cloud-dlg">
+      <h2>☁️ Nube y familia</h2>
+      <div id="cloudBody"></div>
+      <form method="dialog"><button class="ghost-btn cloud-close">Cerrar</button></form>
+    </div>
+  </dialog>
+
   <dialog id="askDialog">
     <form method="dialog" class="ask-form">
       <h2 id="askTitle"></h2>
@@ -86,7 +99,8 @@
     </form>
   </dialog>
 
-  <script src="js/parser.js?v=0.5.1"></script>
-  <script src="js/app.js?v=0.5.1"></script>
+  <script src="js/parser.js?v=0.6"></script>
+  <script src="js/app.js?v=0.6"></script>
+  <script type="module" src="js/nube.js?v=0.6"></script>
 </body>
 </html>

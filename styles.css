@@ -182,3 +182,37 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 a.list-card { text-decoration: none; color: inherit; }
 .list-card.agenda { border-color: #1D4F91; }
 .list-card.agenda .count.has { background: #1D4F91; color: #fff; }
+
+/* Nube */
+.cloud-card {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  margin-bottom: 12px; padding: 12px 14px; border-radius: 14px;
+  border: 1px solid var(--line); background: var(--accent-soft); color: var(--text);
+}
+.cloud-card.off { border-style: dashed; }
+.cloud-icon { font-size: 1.5rem; }
+.cloud-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.cloud-text span { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+.cloud-go { font-size: 1.5rem; color: var(--muted); }
+.cloud-dlg { display: grid; gap: 12px; min-width: min(380px, 80vw); }
+.cloud-dlg h2 { margin: 0; font-size: 1.2rem; }
+.cloud-dlg p { margin: 0; color: var(--muted); }
+.cloud-dlg .primary-btn, .cloud-dlg .ghost-btn { width: 100%; margin: 0; }
+.cloud-close { border-style: solid; }
+.cloud-who { display: flex; gap: 10px; align-items: center; }
+.cloud-who img { width: 36px; height: 36px; border-radius: 50%; }
+.cloud-members { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cloud-members li {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px;
+  background: var(--bg); border: 1px solid var(--line); overflow-wrap: anywhere;
+}
+.cloud-members li span { flex: 1; min-width: 0; }
+.cloud-members button { border: 0; background: transparent; color: var(--danger); font-weight: 600; }
+.cloud-row { display: flex; gap: 8px; }
+.cloud-row input {
+  flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; font-size: 1rem;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text);
+}
+.cloud-row .primary-btn { width: auto; }
+.cloud-note { font-size: .85rem; }
+.google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; }

@@ -1,0 +1,30 @@
+rules_version = '2';
+// Reglas de la base de datos de Dilo (copia de lo publicado en Firebase → Firestore → Reglas).
+// Solo entran las personas cuyo correo de Google está en la lista «miembros» de su casa.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function dentro() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function correo() {
+      return request.auth.token.email.lower();
+    }
+    function esDeLaCasa(hogar) {
+      return dentro() && correo() in get(/databases/$(database)/documents/hogares/$(hogar)).data.miembros;
+    }
+
+    match /hogares/{hogar} {
+      allow read: if dentro() && correo() in resource.data.miembros;
+      allow create: if dentro() && correo() in request.resource.data.miembros
+                    && request.resource.data.creador == request.auth.uid;
+      allow update: if dentro() && correo() in resource.data.miembros
+                    && correo() in request.resource.data.miembros;
+      allow delete: if dentro() && resource.data.creador == request.auth.uid;
+
+      match /{todo=**} {
+        allow read, write: if esDeLaCasa(hogar);
+      }
+    }
+  }
+}
