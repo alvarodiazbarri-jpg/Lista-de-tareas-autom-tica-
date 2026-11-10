@@ -26,7 +26,9 @@ jobs:
       - name: Preparar archivos de la app
         run: |
           mkdir _site
-          cp -r index.html styles.css sw.js manifest.webmanifest js icons _site/
+          cp -r index.html agenda.html styles.css sw.js manifest.webmanifest js icons _site/
+          # Comprobar que están las páginas principales
+          test -f _site/index.html && test -f _site/agenda.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
