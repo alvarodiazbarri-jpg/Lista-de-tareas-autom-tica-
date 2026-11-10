@@ -1,11 +1,12 @@
 // Service worker: permite abrir la app sin conexión.
-const CACHE = 'dilo-v17';
+const CACHE = 'dilo-v18';
 const ASSETS = [
   './',
   'index.html',
   'agenda.html',
   'styles.css',
   'js/parser.js',
+  'js/citas.js',
   'js/app.js',
   'js/nube.js',
   'js/vendor/firebase/firebase-app.js',

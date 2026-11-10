@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.14';
+  const VERSION = '0.15';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -96,14 +96,29 @@
     return Object.keys(o).length ? o : null;
   }
 
+  // Cada lista guarda su puesto («orden») y lo conserva aunque pase un tiempo siendo privada:
+  // así vuelve a su sitio y todos los móviles ordenan igual (antes se numeraban según las que
+  // veía cada móvil, y al esconder una privada se descolocaban las demás).
+  function ponerOrden() {
+    const conOrden = state.lists.filter((l) => typeof l.orden === 'number');
+    let max = conOrden.length ? Math.max(...conOrden.map((l) => l.orden)) : -1;
+    let min = conOrden.length ? Math.min(...conOrden.map((l) => l.orden)) : 0;
+    for (const l of state.lists) {
+      if (typeof l.orden === 'number') continue;
+      l.orden = l.name === INBOX_NAME ? --min : ++max;
+    }
+  }
+  const porOrden = (a, b) => (a.orden ?? 0) - (b.orden ?? 0) || (a.id < b.id ? -1 : 1);
+
   function docsLocales(fuente) {
     const mias = fuente === 'mia';
+    ponerOrden();
     const listas = [];
     const items = [];
     const detalles = [];
     state.lists.forEach((l, i) => {
       if (!!l.privada !== mias) return;
-      listas.push({ id: l.id, data: { ...(l.otros || {}), name: l.name, emoji: l.emoji || emojiFor(l.name), orden: i } });
+      listas.push({ id: l.id, data: { ...(l.otros || {}), name: l.name, emoji: l.emoji || emojiFor(l.name), orden: l.orden ?? i } });
       for (const it of l.items) {
         const d = { ...(it.otros || {}), listId: l.id, text: it.text, done: !!it.done, createdAt: it.createdAt || 0 };
         if (it.audioId) d.audioId = it.audioId;
@@ -167,8 +182,7 @@
         lists.push(l);
       }
     }
-    lists.sort((a, b) => a.orden - b.orden);
-    lists.forEach((l) => delete l.orden);
+    lists.sort(porOrden);
     const porId = new Map(lists.map((l) => [l.id, l]));
     const vistos = new Set();
     for (const fuente of FUENTES) {
@@ -214,10 +228,11 @@
       if (!local) continue;
       const i = nube.lists.findIndex((x) => x.id === id);
       if (i >= 0) nube.lists[i] = local;
-      else nube.lists.splice(Math.min(state.lists.indexOf(local), nube.lists.length), 0, local);
+      else nube.lists.push(local);
       const suyos = new Set(local.items.map((x) => x.id));
       for (const l of nube.lists) if (l !== local) l.items = l.items.filter((x) => !suyos.has(x.id));
     }
+    nube.lists.sort(porOrden);
   }
   const enCamino = new Map();   // id de lista → hasta cuándo se protege
 
@@ -310,6 +325,7 @@
     if (!list) {
       list = { id: uid(), name, emoji: emojiFor(name), items: [] };
       state.lists.push(list);
+      ponerOrden();
     }
     return list;
   }
@@ -439,7 +455,70 @@
     }
   }
 
+  // ---- Citas por voz → «Mi agenda» ----
+  // «cita con el dentista el martes a las 10 para Julia»: se guarda como en agenda.html
+  // (en la nube de la casa, en «citas», o en este móvil si no hay nube)
+  function datosAgenda() {
+    const lee = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+    const familia = lee('agenda:m2') || lee('agenda:miembros') || [];
+    const aj = lee('agenda:aj') || {};
+    const tipos = Array.isArray(aj.tipos) && aj.tipos.length ? aj.tipos
+      : [{ id: 'medica', n: 'Médica' }, { id: 'trabajo', n: 'Trabajo' }, { id: 'tramite', n: 'Trámite' }, { id: 'personal', n: 'Personal' }, { id: 'otra', n: 'Otra' }];
+    return { familia, tipos, aj };
+  }
+  const CLAVE_CITAS = () => {
+    const N = window.DiloNube;
+    if (N && N.estado === 'dentro') return 'agenda:c2';
+    try { return localStorage.getItem('agenda:c2') ? 'agenda:c2' : 'agenda:v1'; } catch (e) { return 'agenda:v1'; }
+  };
+  function citasLocales(clave) { try { return JSON.parse(localStorage.getItem(clave)) || []; } catch (e) { return []; } }
+
+  async function guardarCita(c) {
+    if (!c.fecha) {
+      toast(`📅 Para apuntar «${c.titulo}» en la agenda dime también el día (por ejemplo, «el martes a las 10»)`);
+      return;
+    }
+    const { familia, aj } = datosAgenda();
+    const cita = {
+      id: uid(), titulo: c.titulo, cat: c.cat, fecha: c.fecha, hora: c.hora, lugar: c.lugar, persona: c.persona,
+      notas: '', aviso: c.fecha < hoyISO() ? 'none' : '1d', de: c.de, fotos: [], creada: Date.now(),
+    };
+    if (yoCorreo()) cita.por = yoCorreo();
+    const clave = CLAVE_CITAS();
+    const lista = citasLocales(clave);
+    lista.push(cita);
+    try { localStorage.setItem(clave, JSON.stringify(lista)); } catch (e) {}
+    const N = window.DiloNube;
+    const base = N && N.estado === 'dentro' ? N.db() : null;
+    if (base) base.collection('citas').doc(cita.id).set(JSON.parse(JSON.stringify(cita))).catch(fallaNube);
+    render();
+    // Aviso: «📅 Dentista · mar 17 nov · 10:00 · Julia»
+    const [y, m, d] = cita.fecha.split('-').map(Number);
+    const dia = new Date(y, m - 1, d).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
+    const quien = cita.de === 'familia' ? ((aj.familia && aj.familia.n) || 'Toda la familia') : (familia.find((p) => p.id === cita.de) || {}).n;
+    const resumen = [cita.titulo, dia, cita.hora, cita.lugar, quien].filter(Boolean).join(' · ');
+    toast(`📅 Cita guardada: ${resumen}`, () => {
+      const l = citasLocales(clave).filter((x) => x.id !== cita.id);
+      try { localStorage.setItem(clave, JSON.stringify(l)); } catch (e) {}
+      if (base) base.collection('citas').doc(cita.id).delete().catch(fallaNube);
+      render();
+      toast('Cita borrada');
+    });
+    // Notificación de confirmación (en las citas sí, aunque Dilo esté abierta); al tocarla, se abre la cita
+    if (canNotify() && Notification.permission === 'granted') {
+      try {
+        const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((r) => setTimeout(() => r(null), 3000))]);
+        if (reg) await reg.showNotification('✅ Apuntado en Mi agenda', {
+          body: resumen + '\nToca para revisarlo', icon: 'icons/icon-192.png', badge: 'icons/badge-96.png',
+          tag: 'agenda-' + Date.now(), data: { agenda: true, citaId: cita.id },
+        });
+      } catch (e) { /* sin notificación: queda el aviso en pantalla */ }
+    }
+  }
+
   function handleInput(text) {
+    const cita = window.DiloCitas ? window.DiloCitas.parse(text, datosAgenda()) : null;
+    if (cita) { guardarCita(cita); return; }
     const result = parse(text, state.lists);
     if (!result) return;
     if (result.type === 'delete' || result.type === 'done') { quitarPorVoz(result, text); return; }
@@ -711,14 +790,18 @@
 
   // ---------- Toast con deshacer ----------
   let toastTimer;
+  // deshacerOtro: para deshacer algo que no son las listas (p. ej. una cita guardada por voz)
+  let deshacerOtro = null;
   function toast(msg, undoable = false) {
     $('toastMsg').textContent = msg;
-    $('toastUndo').hidden = !undoable || !undoSnapshot;
+    if (typeof undoable === 'function') { deshacerOtro = undoable; undoable = true; } else deshacerOtro = null;
+    $('toastUndo').hidden = !undoable || (!undoSnapshot && !deshacerOtro);
     $('toast').hidden = false;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { $('toast').hidden = true; }, 4000);
   }
   $('toastUndo').addEventListener('click', () => {
+    if (deshacerOtro) { const f = deshacerOtro; deshacerOtro = null; f(); $('toast').hidden = true; return; }
     if (!undoSnapshot) return;
     state = JSON.parse(undoSnapshot);
     undoSnapshot = null;
