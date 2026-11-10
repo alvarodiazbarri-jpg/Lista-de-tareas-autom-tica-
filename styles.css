@@ -178,3 +178,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 
 .notify-btn { display: block; width: 100%; margin: 0 0 12px; text-align: left; border-style: solid; color: var(--text); }
 .notify-btn:disabled { opacity: .75; cursor: default; }
+
+a.list-card { text-decoration: none; color: inherit; }
+.list-card.agenda { border-color: #1D4F91; }
+.list-card.agenda .count.has { background: #1D4F91; color: #fff; }

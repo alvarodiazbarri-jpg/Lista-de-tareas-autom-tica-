@@ -1,8 +1,9 @@
 // Service worker: permite abrir la app sin conexión.
-const CACHE = 'dilo-v5';
+const CACHE = 'dilo-v6';
 const ASSETS = [
   './',
   'index.html',
+  'agenda.html',
   'styles.css',
   'js/parser.js',
   'js/app.js',
@@ -46,13 +47,17 @@ self.addEventListener('fetch', (e) => {
 // Al tocar la notificación de "Apuntado": abrir la app en esa lista para revisarlo
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const listId = e.notification.data && e.notification.data.listId;
-  const url = new URL('./' + (listId ? '?lista=' + encodeURIComponent(listId) : ''), self.registration.scope).href;
+  const d = e.notification.data || {};
+  // Notificaciones de la agenda abren la cita; las de las listas abren la lista
+  const page = d.agenda ? 'agenda.html' + (d.citaId ? '?cita=' + encodeURIComponent(d.citaId) : '')
+    : './' + (d.listId ? '?lista=' + encodeURIComponent(d.listId) : '');
+  const url = new URL(page, self.registration.scope).href;
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
       for (const w of wins) {
-        if (w.url.startsWith(self.registration.scope)) {
-          w.postMessage({ openList: listId });
+        const enAgenda = w.url.includes('agenda.html');
+        if (w.url.startsWith(self.registration.scope) && enAgenda === !!d.agenda) {
+          w.postMessage(d.agenda ? { openCita: d.citaId } : { openList: d.listId });
           return w.focus();
         }
       }

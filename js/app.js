@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.4';
+  const VERSION = '0.5';
   const $ = (id) => document.getElementById(id);
 
   // ---------- Datos ----------
@@ -386,9 +386,27 @@
     if (list) renderList(list); else renderHome();
   }
 
+  // Citas pendientes de «Mi agenda» (se guarda aparte, en agenda.html)
+  function agendaPending() {
+    try {
+      const citas = JSON.parse(localStorage.getItem('agenda:v1')) || [];
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return citas.filter((c) => c.fecha >= today && (c.estado || (c.hecha ? 'hecha' : 'pendiente')) === 'pendiente').length;
+    } catch (e) { return 0; }
+  }
+
   function renderHome() {
     const wrap = $('lists');
     wrap.innerHTML = '';
+    const ag = document.createElement('a');
+    ag.className = 'list-card agenda';
+    ag.href = 'agenda.html';
+    ag.innerHTML = '<span class="emoji">📅</span><span class="name">Mi agenda</span><span class="count"></span>';
+    const n = agendaPending();
+    ag.querySelector('.count').textContent = n;
+    if (n) ag.querySelector('.count').classList.add('has');
+    wrap.appendChild(ag);
     for (const l of state.lists) {
       const pending = l.items.filter((i) => !i.done).length;
       const b = document.createElement('button');

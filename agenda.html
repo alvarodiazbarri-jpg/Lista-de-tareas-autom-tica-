@@ -1,0 +1,1372 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi agenda · Dilo</title>
+<meta name="theme-color" content="#1D4F91">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F4; --card:#FFFFFF; --ink:#18222E; --muted:#5B6877; --line:#D5DBE2;
+  --accent:#1D4F91; --accent-ink:#FFFFFF; --ribbon:#B3262E; --warn:#9A5B00; --soft:#E4EAF1;
+  --c-medica:#2F8F6B; --c-trabajo:#1D4F91; --c-tramite:#B7791F; --c-personal:#8A4FBF; --c-otra:#6B7785;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12171D; --card:#1B232C; --ink:#E7ECF1; --muted:#9AA7B5; --line:#2B3744;
+    --accent:#7FB0EE; --accent-ink:#0E1620; --ribbon:#E0555C; --warn:#E5A84B; --soft:#232E3A;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12171D; --card:#1B232C; --ink:#E7ECF1; --muted:#9AA7B5; --line:#2B3744;
+  --accent:#7FB0EE; --accent-ink:#0E1620; --ribbon:#E0555C; --warn:#E5A84B; --soft:#232E3A;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*{box-sizing:border-box}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:17px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px 120px}
+
+/* cabecera con cinta de agenda */
+header.top{position:relative;padding:14px 0 14px}
+.volver{display:inline-flex;align-items:center;margin:0 0 10px;padding:8px 14px 8px 10px;border-radius:99px;background:var(--accent);color:var(--accent-ink);font-weight:700;text-decoration:none;font-size:16px}
+header.top .ribbon{position:absolute;right:56px;top:-6px;width:22px;height:54px;background:var(--ribbon);
+  clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%)}
+header.top h1{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-.01em}
+header.top .hoy{margin:4px 0 0;color:var(--muted);font-size:16px}
+.menu-btn{position:absolute;right:-6px;top:18px;width:44px;height:44px;border:0;background:none;border-radius:50%;
+  display:grid;place-items:center;color:var(--muted)}
+.menu-btn:active{background:var(--soft)}
+
+.bar{display:flex;gap:8px;align-items:center;margin:6px 0 10px}
+.search{flex:1;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:0 12px;height:46px}
+.search input{border:0;background:none;outline:0;width:100%;font-size:16px;height:100%}
+.tabs{display:flex;background:var(--soft);border-radius:12px;padding:3px;margin-bottom:10px}
+.tabs button{flex:1;border:0;background:none;height:40px;border-radius:9px;font-weight:700;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--card);border-radius:999px;height:36px;padding:0 14px;
+  display:flex;align-items:center;gap:7px;font-size:15px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+
+.aviso{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--ribbon);border-radius:12px;
+  padding:12px 14px;margin-bottom:14px}
+.aviso b{display:block;margin-bottom:2px}
+.aviso button{margin-top:8px;border:0;background:none;color:var(--accent);font-weight:700;padding:6px 0}
+
+h2.grp{font-size:15px;font-weight:700;color:var(--muted);margin:18px 0 8px;letter-spacing:.01em}
+#lista .item{display:flex;align-items:stretch;width:100%;border-radius:18px;margin-bottom:12px;overflow:hidden;
+  background:var(--c,var(--card));color:var(--t,var(--ink));min-height:104px;box-shadow:0 1px 4px rgba(0,0,0,.22)}
+#lista .item .main{flex:1;min-width:0;display:flex;gap:12px;align-items:center;border:0;background:none;color:inherit;text-align:left;padding:10px 4px 10px 10px}
+#lista .item .main:active{background:rgba(0,0,0,.12)}
+#lista .item .main:focus-visible,#lista .item .estado:focus-visible{outline:3px solid #fff;outline-offset:-3px;box-shadow:0 0 0 5px #111}
+.fecha{flex:none;width:62px;background:#fff;color:#18222E;border-radius:12px;overflow:hidden;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.fecha .mes{display:block;color:#fff;font-size:13px;font-weight:700;padding:3px 0;text-transform:uppercase;letter-spacing:.05em}
+.fecha .n{display:block;font-size:30px;font-weight:700;line-height:1.1;padding-top:2px}
+.fecha .dia{display:block;font-size:13px;padding-bottom:4px;color:#4A5665;text-transform:uppercase}
+#lista .item .cuerpo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+#lista .item .nombre{font-size:24px;font-weight:700;line-height:1.1;text-transform:uppercase;overflow-wrap:anywhere}
+#lista .item .t{font-weight:700;font-size:17px;line-height:1.2;text-transform:uppercase;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#lista .item .s{font-size:15px;opacity:.92;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#lista .item.hecha .main,#lista .item.cancelada .main{opacity:.68}
+#lista .item.cancelada .t,#lista .item.cancelada .nombre{text-decoration:line-through}
+.estado{flex:none;width:96px;margin:10px 10px 10px 4px;border:3px solid #fff;border-radius:14px;font-weight:700;font-size:13px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-transform:uppercase;line-height:1.1;padding:6px 4px;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.estado .sim{font-size:26px;line-height:1}
+.estado.pendiente,.btn.est.pendiente{background:#FFD23F;color:#2A2100;border-color:#fff}
+.estado.hecha,.btn.est.hecha{background:#1F9D55;color:#fff;border-color:#fff}
+.estado.cancelada,.btn.est.cancelada{background:#D32F2F;color:#fff;border-color:#fff}
+.btn.est{font-size:18px;min-height:56px;border-width:3px;box-shadow:0 0 0 1px var(--line)}
+.btn.est[aria-pressed="true"]{box-shadow:0 0 0 4px var(--ink)}
+#lista h2.grp{display:flex;justify-content:space-between;align-items:baseline;background:var(--m,var(--ink));color:#fff;font-size:21px;font-weight:700;
+  padding:10px 14px;border-radius:12px;margin:24px 0 12px;text-transform:uppercase;letter-spacing:.03em}
+#lista h2.grp.dia{background:var(--ink);color:var(--bg);font-size:19px}
+.up{text-transform:uppercase}
+.search{min-width:0}
+.anio{background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 14px;margin:22px 0 10px;font-size:22px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline}
+.anio small{font-size:15px;font-weight:400;opacity:.85}
+.cont-row{display:flex;justify-content:space-between;align-items:center;gap:12px;border-radius:14px;padding:12px 16px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.cont-row .nom{font-size:22px;font-weight:700;text-transform:uppercase;overflow-wrap:anywhere}
+.cont-row .num{font-size:34px;font-weight:700;line-height:1}
+#lista .item .donde{font-size:19px;font-weight:700;line-height:1.2;text-transform:uppercase;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#lista .item .donde .hora{font-size:24px}
+#lista .item .t{font-size:16px}
+#lista .item .s{font-size:14px;opacity:.85}
+.det h4,.dato span:last-child{text-transform:uppercase}
+.vacio{text-align:center;color:var(--muted);padding:48px 20px}
+.vacio b{display:block;color:var(--ink);font-size:19px;margin-bottom:6px}
+
+.fabbar{position:fixed;left:0;right:0;bottom:0;padding:0 18px calc(16px + env(safe-area-inset-bottom,0px));
+  display:flex;justify-content:flex-end;pointer-events:none;z-index:5}
+.fab{pointer-events:auto;height:58px;border-radius:29px;border:0;background:var(--accent);color:var(--accent-ink);
+  padding:0 22px 0 18px;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(0,0,0,.28)}
+
+/* hojas */
+.sheet{position:fixed;inset:0;background:var(--bg);z-index:10;overflow-y:auto;display:none}
+.sheet.open{display:block}
+.sheet .head{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line);
+  padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;align-items:center;gap:8px}
+.sheet .head h3{margin:0;flex:1;font-size:19px}
+.sheet .body{max-width:640px;margin:0 auto;padding:16px 16px calc(40px + env(safe-area-inset-bottom,0px))}
+.lnk{border:0;background:none;color:var(--accent);font-weight:700;height:44px;padding:0 10px;border-radius:10px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:50px;border-radius:12px;
+  border:1px solid var(--line);background:var(--card);font-weight:700;margin-top:10px;padding:0 14px;text-decoration:none;color:var(--ink)}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.bad{color:var(--ribbon)}
+.btn[disabled]{opacity:.55}
+label.f{display:block;margin:14px 0 0;font-weight:700;font-size:15px}
+label.f small{font-weight:400;color:var(--muted)}
+.in{display:block;width:100%;margin-top:6px;min-height:48px;border:1px solid var(--line);background:var(--card);
+  border-radius:12px;padding:10px 12px;font-size:16px}
+textarea.in{min-height:90px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cats{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.fotos{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.foto{position:relative;width:96px;height:96px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--soft)}
+.foto img{width:100%;height:100%;object-fit:cover;display:block}
+.foto .x{position:absolute;top:4px;right:4px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:16px;line-height:1}
+.nota{background:var(--soft);border-radius:12px;padding:10px 12px;margin-top:12px;font-size:15px;color:var(--muted)}
+.nota.ok{color:var(--ink)}
+.det h4{margin:0;font-size:26px;line-height:1.15}
+.det .cat{display:flex;align-items:center;gap:8px;color:var(--muted);margin-bottom:6px;font-size:15px}
+.dato{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.dato span:first-child{width:92px;flex:none;color:var(--muted);font-size:15px}
+.dato span:last-child{flex:1;min-width:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:30;display:none;align-items:center;justify-content:center;padding:12px}
+.lightbox.open{display:flex}
+.lightbox img{max-width:100%;max-height:100%;object-fit:contain}
+.toasts{position:fixed;left:12px;right:12px;top:calc(10px + env(safe-area-inset-top,0px));z-index:40;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{pointer-events:auto;background:var(--ink);color:var(--bg);border-radius:12px;padding:12px 14px;box-shadow:0 4px 14px rgba(0,0,0,.3);display:flex;gap:10px;align-items:center}
+.toast span{flex:1}
+.toast button{border:0;background:none;color:inherit;font-weight:700;text-decoration:underline;padding:6px}
+.imp{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.imp .r1{display:flex;gap:10px;align-items:center}
+.imp .r2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.imp .in{margin-top:0;min-height:44px}
+.chk{width:24px;height:24px;accent-color:var(--accent);flex:none}
+.tag{display:inline-block;font-size:13px;padding:2px 9px;border-radius:999px;background:var(--soft);color:var(--warn);margin:8px 6px 0 0;font-weight:700}
+.chips .lbl{flex:none;align-self:center;color:var(--muted);font-size:14px}
+.sw{width:34px;height:34px;border-radius:50%;border:3px solid var(--card);box-shadow:0 0 0 1px var(--line);flex:none}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 3px var(--ink)}
+.miem{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.miem .in{margin-top:0}
+.sws{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;padding-left:2px}
+.pie{display:flex;justify-content:space-between;align-items:center;margin-top:8px;color:var(--muted);font-size:15px}
+.modo{margin:-4px 0 10px;font-size:14px;color:var(--warn)}
+.modo.ok{color:var(--muted)}
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:none;align-items:center;justify-content:center;padding:20px}
+.dlg.open{display:flex}
+.dlg .box{background:var(--card);border-radius:16px;padding:18px;max-width:420px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+.dlg p{margin:0 0 6px;font-size:18px}
+[hidden]{display:none!important}
+.tabs.vistas{margin-top:2px}
+.calh{display:flex;align-items:center;gap:6px;margin:6px 0 12px}
+.ctit{flex:1;margin:0;font-size:25px;line-height:1.1;font-weight:700;letter-spacing:-.01em;min-width:0}
+.ctit small{font-weight:400;color:var(--muted);font-size:20px}
+.cnav{min-width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:26px;font-weight:700;padding:0 10px;line-height:1}
+.cnav.hoyb{font-size:16px}
+.cgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:8px;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.cdw{text-align:center;font-size:14px;font-weight:700;color:var(--muted);padding:2px 0 4px}
+.cd{position:relative;aspect-ratio:1/1.05;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:0;display:grid;place-items:center;font-weight:700;color:var(--ink);overflow:visible}
+.cd .n{font-size:17px;min-width:28px;height:28px;border-radius:50%;display:grid;place-items:center}
+.cd.has{border:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.cd.has .n{background:rgba(255,255,255,.94);color:#111}
+.cd.out{opacity:.4}
+.cd.canc{opacity:.5}
+.cd.canc .n{text-decoration:line-through}
+.cd .k{position:absolute;right:3px;bottom:2px;min-width:19px;height:19px;border-radius:10px;background:#111;color:#fff;font-size:12px;display:grid;place-items:center;padding:0 4px;border:1.5px solid #fff}
+.cd.ok::after{content:'✔';position:absolute;left:4px;bottom:1px;font-size:13px;color:#fff;text-shadow:0 0 3px #000,0 0 2px #000}
+.cd.hoy{box-shadow:0 0 0 3px #FFD23F,0 0 0 5px #111;z-index:1}
+.cd.sel{outline:3px solid var(--ink);outline-offset:3px;z-index:2}
+.ygrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ymes{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px}
+.ytit{width:100%;display:flex;justify-content:space-between;align-items:baseline;border:0;background:none;font-weight:700;font-size:17px;padding:2px 2px 6px;text-align:left}
+.ytit small{font-size:12px;color:var(--muted);font-weight:400}
+.yg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.ymes .cd{aspect-ratio:1;border-radius:4px;border:0;background:var(--soft)}
+.ymes .cd .n{font-size:10px;min-width:0;height:auto;width:100%;border-radius:0;background:none!important;color:inherit;font-weight:700}
+.ymes .cd.has .n{color:#fff!important;text-shadow:0 0 2px #000,0 0 3px #000}
+.ymes .cd .k,.ymes .cd.ok::after{display:none}
+.ymes .cd.hoy{box-shadow:0 0 0 2px #FFD23F,0 0 0 3.5px #111}
+.ymes .cd.sel{outline-width:2px;outline-offset:1px}
+.leyenda{margin:12px 2px 0;color:var(--muted);font-size:14px}
+@media (min-width:560px){.ygrid{grid-template-columns:repeat(3,1fr)}}
+@media (prefers-reduced-motion:no-preference){.sheet.open{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:0}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="volver" href="./" aria-label="Volver a las listas de Dilo">‹ Listas</a>
+    <div class="ribbon" aria-hidden="true"></div>
+    <h1>Mi agenda</h1>
+    <p class="hoy" id="hoy"></p>
+    <button class="menu-btn" id="btnMenu" aria-label="Más opciones">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+    </button>
+  </header>
+  <p class="modo" id="modo"></p>
+  <div id="avisoBox"></div>
+  <div class="bar">
+    <label class="search">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Buscar cita, médico, lugar…" autocomplete="off">
+    </label>
+    <button class="chip" id="btnCont" style="height:46px;border-radius:12px;font-weight:700">Contador</button>
+    
+  </div>
+  <div class="tabs vistas" role="tablist" aria-label="Forma de ver la agenda">
+    <button role="tab" id="vLista" aria-selected="true">Lista</button>
+    <button role="tab" id="vMes" aria-selected="false">Mes</button>
+    <button role="tab" id="vAnio" aria-selected="false">Año</button>
+  </div>
+  <div class="tabs" id="tabsLista" role="tablist">
+    <button role="tab" id="tabProx" aria-selected="true">Próximas</button>
+    <button role="tab" id="tabPas" aria-selected="false">Pasadas</button>
+  </div>
+  <div class="chips" id="chipsQ" aria-label="Filtrar por persona"></div>
+  <div class="chips" id="chips" aria-label="Filtrar por tipo"></div>
+  <main id="lista"></main>
+</div>
+
+<div class="fabbar"><button class="fab" id="btnNueva">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  Apuntar</button></div>
+
+<section class="sheet" id="sheet" aria-modal="true" role="dialog"></section>
+<div class="lightbox" id="lightbox"><img alt="Foto de la cita"></div>
+<div class="dlg" id="dlg"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+const CATS = {
+  medica:  {n:'Médica',   c:'var(--c-medica)'},
+  trabajo: {n:'Trabajo',  c:'var(--c-trabajo)'},
+  tramite: {n:'Trámite',  c:'var(--c-tramite)'},
+  personal:{n:'Personal', c:'var(--c-personal)'},
+  otra:    {n:'Otra',     c:'var(--c-otra)'}
+};
+const AVISOS_HORA = [['none','Sin aviso'],['at','A la hora de la cita'],['30','30 minutos antes'],['60','1 hora antes'],['120','2 horas antes'],['1d','1 día antes'],['2d','2 días antes']];
+const AVISOS_DIA  = [['none','Sin aviso'],['at','Ese día a las 8:00'],['1d','La víspera a las 9:00'],['2d','2 días antes a las 9:00']];
+
+/* ---------- utilidades ---------- */
+const pad = n => String(n).padStart(2,'0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const may = v => (v||'').trim().toLocaleUpperCase('es-ES');
+function h(tag, attrs, ...kids){
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs||{})){
+    if (v==null || v===false) continue;
+    if (k==='class') e.className = v;
+    else if (k==='text') e.textContent = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v===true ? '' : v);
+  }
+  for (const c of kids.flat()){ if (c==null||c===false) continue; e.append(c.nodeType ? c : document.createTextNode(c)); }
+  return e;
+}
+function startDate(a){
+  const [y,m,d] = a.fecha.split('-').map(Number);
+  if (a.hora){ const [hh,mm] = a.hora.split(':').map(Number); return new Date(y,m-1,d,hh,mm); }
+  return new Date(y,m-1,d,0,0);
+}
+function alertDate(a){
+  if (!a.aviso || a.aviso==='none') return null;
+  const s = startDate(a).getTime();
+  if (!a.hora){
+    const off = {at:8*60,'30':8*60,'60':8*60,'120':8*60,'1d':-15*60,'2d':-39*60}[a.aviso];
+    return new Date(s + off*60000);
+  }
+  const mins = {at:0,'30':30,'60':60,'120':120,'1d':1440,'2d':2880}[a.aviso];
+  return new Date(s - mins*60000);
+}
+const fmtLargo = a => cap(new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(startDate(a)));
+const fmtMes   = a => new Intl.DateTimeFormat('es-ES',{month:'short'}).format(startDate(a)).replace('.','');
+const avisoTxt = a => { const l = (a.hora?AVISOS_HORA:AVISOS_DIA).find(x=>x[0]===a.aviso); return l ? l[1] : 'Sin aviso'; };
+
+/* ---------- datos ---------- */
+const KEY = 'agenda:v1', KEYC = 'agenda:c2';
+const leeJSON = k => { try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } };
+const clona = o => JSON.parse(JSON.stringify(o));
+const legacyC = Array.isArray(leeJSON(KEY)) ? leeJSON(KEY) : [];
+let appts = Array.isArray(leeJSON(KEYC)) ? leeJSON(KEYC) : clona(legacyC);
+/* ---- datos: caché local + base de datos compartida ---- */
+const PALETA = ['#1D6FD1','#D1495B','#2F8F6B','#E08A00','#8A4FBF','#0E9AA7','#A8643A','#6B7785','#C2185B','#558B2F','#283593','#F9A825'];
+const FAMILIA = {id:'familia', n:'Toda la familia', c:'#44515F'};
+const NADIE = {id:'', n:'Sin asignar', c:'#9AA5B1'};
+const KEYM = 'agenda:miembros';
+const KEYM2 = 'agenda:m2';
+const legacyM = Array.isArray(leeJSON(KEYM)) && leeJSON(KEYM).length ? leeJSON(KEYM) : [{id:'yo', n:'Yo', c:PALETA[0]}];
+let miembros = Array.isArray(leeJSON(KEYM2)) ? leeJSON(KEYM2) : clona(legacyM);
+let ultimoDe = miembros.length ? miembros[0].id : '';
+const localInicial = {citas: clona(legacyC), miembros: legacyC.length ? clona(legacyM) : []};
+
+let DB = null, soloLectura = false, migrado = false;
+const listos = {citas:false, familia:false};
+const guardado = {citas:new Map(), familia:new Map()};
+const canon = o => JSON.stringify(Object.keys(o).filter(k=>k!=='avisado').sort().map(k=>[k,o[k]]));
+const limpio = o => { const c = JSON.parse(JSON.stringify(o)); delete c.avisado; return c; };
+let colaEscritura = Promise.resolve(), ultimoFallo = 0;
+
+function fallo(e){
+  const t = Date.now(); if (t - ultimoFallo < 4000) return; ultimoFallo = t;
+  const c = e && e.code;
+  toast(c==='invalid_argument' ? 'No tienes permiso para cambiar esta agenda. Pide que te inviten como editor.'
+      : c==='quota_exceeded' ? 'La agenda compartida está llena.'
+      : 'No se pudo sincronizar ahora. Se reintentará en el próximo cambio.');
+}
+function volcar(col, arr){
+  if (!DB || soloLectura) return;
+  const mapa = guardado[col], tareas = [], ids = new Set(arr.map(o=>o.id));
+  for (const o of arr){
+    const c = canon(o);
+    if (mapa.get(o.id) !== c){ mapa.set(o.id, c); tareas.push(['set', o.id, limpio(o)]); }
+  }
+  for (const id of [...mapa.keys()]) if (!ids.has(id)){ mapa.delete(id); tareas.push(['del', id]); }
+  if (!tareas.length) return;
+  colaEscritura = colaEscritura.then(async () => {
+    for (const [op,id,body] of tareas){
+      for (let intento=0; intento<2; intento++){
+        try{
+          const ref = DB.collection(col).doc(id);
+          if (op==='set') await ref.set(body); else await ref.delete();
+          break;
+        }catch(e){
+          if (e && e.code==='unavailable' && intento===0){ await new Promise(r=>setTimeout(r,1500)); continue; }
+          mapa.delete(id); fallo(e); break;
+        }
+      }
+    }
+  });
+}
+function guardar(){
+  try { localStorage.setItem(DB ? KEYC : KEY, JSON.stringify(appts)); }
+  catch(e){ toast('No se pudo guardar en este navegador. Haz una copia de seguridad.'); }
+  volcar('citas', appts);
+}
+function guardarM(){
+  try { localStorage.setItem(DB ? KEYM2 : KEYM, JSON.stringify(miembros)); } catch(e){}
+  volcar('familia', miembros);
+}
+function ponModo(txt, ok){ const m = $('#modo'); m.textContent = txt; m.className = 'modo'+(ok?' ok':''); }
+
+/* ajustes compartidos: nombre y color de «sin asignar» y «familia», y los tipos de apunte */
+const KEYA = 'agenda:aj';
+const TIPOS_INI = Object.entries(CATS).map(([id,v]) => ({id, n:v.n}));
+const ajDefecto = () => ({nadie:{n:'Sin asignar', c:'#9AA5B1'}, familia:{n:'Toda la familia', c:'#44515F'}, tipos:clona(TIPOS_INI)});
+function ajNorm(d){
+  const b = ajDefecto(); if (!d || typeof d!=='object') return b;
+  const txt = v => (typeof v==='string' && v.trim()) ? v.trim().slice(0,24) : null;
+  const col = v => (typeof v==='string' && /^#[0-9a-fA-F]{6}$/.test(v)) ? v : null;
+  const r = {
+    nadie:{n:txt(d.nadie&&d.nadie.n)||b.nadie.n, c:col(d.nadie&&d.nadie.c)||b.nadie.c},
+    familia:{n:txt(d.familia&&d.familia.n)||b.familia.n, c:col(d.familia&&d.familia.c)||b.familia.c},
+    tipos:Array.isArray(d.tipos) ? d.tipos.filter(t=>t && typeof t.id==='string' && t.id && txt(t.n)).map(t=>({id:t.id, n:txt(t.n)})) : []
+  };
+  if (!r.tipos.length) r.tipos = b.tipos;
+  return r;
+}
+let ajustes = ajNorm(leeJSON(KEYA));
+let ajGuardado = JSON.stringify(ajustes);
+function aplicaAj(){
+  NADIE.n = ajustes.nadie.n; NADIE.c = ajustes.nadie.c;
+  FAMILIA.n = ajustes.familia.n; FAMILIA.c = ajustes.familia.c;
+  for (const k of Object.keys(CATS)) delete CATS[k];
+  for (const t of ajustes.tipos) CATS[t.id] = {n:t.n, c:'#6B7785'};
+}
+aplicaAj();
+const tipoDe = a => CATS[a.cat] || {n:'Sin tipo', c:'#6B7785'};
+const tiposTxt = () => Object.entries(CATS).map(([k,v]) => `${k}=${v.n}`).join('; ');
+function volcarAj(){
+  if (!DB || soloLectura) return;
+  const c = JSON.stringify(ajustes); if (c === ajGuardado) return;
+  ajGuardado = c; const body = clona(ajustes);
+  colaEscritura = colaEscritura.then(async () => {
+    for (let i=0; i<2; i++){
+      try { await DB.doc('ajustes/general').set(body); break; }
+      catch(e){ if (e && e.code==='unavailable' && i===0){ await new Promise(r=>setTimeout(r,1500)); continue; } ajGuardado = ''; fallo(e); break; }
+    }
+  });
+}
+function guardarAj(){
+  try { localStorage.setItem(KEYA, JSON.stringify(ajustes)); } catch(e){}
+  aplicaAj(); render(); volcarAj();
+}
+
+/* diálogo propio (confirm() puede estar bloqueado en la página) */
+function confirmar(texto, ok, no){
+  return new Promise(res => {
+    const d = $('#dlg');
+    const cierra = v => { d.classList.remove('open'); d.replaceChildren(); res(v); };
+    d.replaceChildren(h('div',{class:'box',role:'alertdialog'},
+      h('p',{text:texto}),
+      h('button',{class:'btn pri',type:'button',text:ok||'Aceptar',onclick:()=>cierra(true)}),
+      h('button',{class:'btn',type:'button',text:no||'Cancelar',onclick:()=>cierra(false)})));
+    d.classList.add('open');
+  });
+}
+
+/* aplica lo que llega de la base compartida sin cambiar las referencias de los objetos */
+function aplica(col, snap){
+  const arr = col==='citas' ? appts : miembros;
+  const mapa = guardado[col], ids = new Set();
+  for (const d of snap.docs){
+    const data = JSON.parse(JSON.stringify({...d.data(), id:d.id}));
+    ids.add(d.id); mapa.set(d.id, canon(data));
+    const ex = arr.find(x=>x.id===d.id);
+    if (ex){
+      if (canon(ex) !== mapa.get(d.id)){ for (const k of Object.keys(ex)) if (k!=='avisado') delete ex[k]; Object.assign(ex, data); }
+    } else arr.push(data);
+  }
+  for (let i=arr.length-1; i>=0; i--) if (!ids.has(arr[i].id)){ mapa.delete(arr[i].id); arr.splice(i,1); }
+  try { localStorage.setItem(col==='citas' ? KEYC : KEYM2, JSON.stringify(arr)); } catch(e){}
+  if (col==='familia' && !miembros.some(m=>m.id===ultimoDe)) ultimoDe = miembros.length ? miembros[0].id : '';
+  if (!snap.metadata.fromCache) listos[col] = true;
+  render();
+  migrar();
+}
+async function migrar(){
+  if (migrado || !listos.citas || !listos.familia) return;
+  migrado = true;
+  let hecho = false; try { hecho = localStorage.getItem('agenda:sync1')==='1'; } catch(e){}
+  if (hecho) return;
+  const marca = () => { try { localStorage.setItem('agenda:sync1','1'); } catch(e){} };
+  const nuevasC = localInicial.citas.filter(c => c && c.id && !appts.some(a=>a.id===c.id));
+  const nuevasM = localInicial.miembros.filter(m => m && m.id && !miembros.some(x=>x.id===m.id));
+  if (!localInicial.citas.length || (!nuevasC.length && !nuevasM.length) || soloLectura){ marca(); return; }
+  const ok = await confirmar(`Hay ${localInicial.citas.length} ${localInicial.citas.length===1?'cita guardada':'citas guardadas'} solo en este móvil. ¿Las paso a la agenda compartida?`, 'Pasarlas', 'Ahora no');
+  if (!ok){ migrado = false; return; }
+  nuevasM.forEach(m => miembros.push(m)); nuevasC.forEach(c => appts.push(c));
+  guardarM(); guardar(); marca(); render();
+  toast(`Pasadas ${nuevasC.length} ${nuevasC.length===1?'cita':'citas'} a la agenda compartida`);
+}
+async function iniciarSync(){
+  // En Dilo la agenda se guarda en este móvil (la sincronización en la nube vendrá después)
+  ponModo('', true);
+}
+
+function quien(a){ return a.de==='familia' ? FAMILIA : (miembros.find(m=>m.id===a.de) || NADIE); }
+const sinAcentos = t => (t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function buscaMiembro(txt){
+  const tk = new Set(sinAcentos(txt).split(/[^a-z0-9]+/).filter(Boolean));
+  if (!tk.size) return '';
+  for (const m of miembros){
+    const mt = sinAcentos(m.n).split(/[^a-z0-9]+/).filter(Boolean);
+    if (mt.length && mt.every(x=>tk.has(x))) return m.id;
+  }
+  return '';
+}
+function chipsDe(valor, alElegir, conNadie){
+  const box = h('div',{class:'cats'});
+  const pinta = () => {
+    box.replaceChildren();
+    for (const m of [...miembros, FAMILIA, ...(conNadie ? [NADIE] : [])])
+      box.append(h('button',{type:'button',class:'chip','aria-pressed':String(valor===m.id),onclick:()=>{ valor = m.id; alElegir(m.id); pinta(); }},
+        h('span',{class:'dot',style:`background:${m.c}`}), m.n));
+  };
+  box.set = v => { valor = v; pinta(); };
+  pinta(); return box;
+}
+
+/* fotos en IndexedDB (con respaldo en memoria si no hay) */
+const mem = new Map();
+let dbp = null;
+function idb(){
+  if (dbp) return dbp;
+  dbp = new Promise((res,rej)=>{
+    try{
+      const r = indexedDB.open('agenda-fotos',1);
+      r.onupgradeneeded = () => r.result.createObjectStore('f',{keyPath:'id'});
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    }catch(e){ rej(e); }
+  });
+  return dbp;
+}
+async function putFoto(id, blob){
+  mem.set(id, blob);
+  try{ const d = await idb(); await new Promise((res,rej)=>{ const t=d.transaction('f','readwrite'); t.objectStore('f').put({id,blob}); t.oncomplete=res; t.onerror=()=>rej(t.error); }); }
+  catch(e){ if(!putFoto.avisado){ putFoto.avisado=true; toast('Este navegador no guarda fotos de forma permanente.'); } }
+}
+async function getFoto(id){
+  if (mem.has(id)) return mem.get(id);
+  try{ const d = await idb(); return await new Promise((res,rej)=>{ const r=d.transaction('f').objectStore('f').get(id); r.onsuccess=()=>res(r.result?r.result.blob:null); r.onerror=()=>rej(r.error); }); }
+  catch(e){ return null; }
+}
+async function delFoto(id){
+  mem.delete(id);
+  const u = urls.get(id); if (u){ URL.revokeObjectURL(u); urls.delete(id); }
+  try{ const d = await idb(); await new Promise((res)=>{ const t=d.transaction('f','readwrite'); t.objectStore('f').delete(id); t.oncomplete=res; t.onerror=res; }); }catch(e){}
+}
+const urls = new Map();
+async function fotoURL(id){
+  if (urls.has(id)) return urls.get(id);
+  const b = await getFoto(id); if (!b) return null;
+  const u = URL.createObjectURL(b); urls.set(id,u); return u;
+}
+async function comprimir(file){
+  let src, w, hh;
+  const bmp = await createImageBitmap(file,{imageOrientation:'from-image'}).catch(()=>null);
+  if (bmp){ src=bmp; w=bmp.width; hh=bmp.height; }
+  else {
+    src = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
+    w = src.naturalWidth; hh = src.naturalHeight;
+  }
+  const k = Math.min(1, 1600/Math.max(w,hh));
+  const c = document.createElement('canvas'); c.width = Math.round(w*k); c.height = Math.round(hh*k);
+  c.getContext('2d').drawImage(src,0,0,c.width,c.height);
+  return new Promise(res => c.toBlob(b=>res(b),'image/jpeg',.82));
+}
+
+/* ---------- avisos ---------- */
+function toast(msg, accion){
+  const t = h('div',{class:'toast'}, h('span',{text:msg}));
+  if (accion) t.append(h('button',{text:accion.t,onclick:()=>{accion.f(); t.remove();}}));
+  const close = h('button',{'aria-label':'Cerrar',text:'✕',onclick:()=>t.remove()});
+  t.append(close);
+  $('#toasts').append(t);
+  setTimeout(()=>t.remove(), accion ? 20000 : 5000);
+}
+const AVK = 'agenda:avisados';
+let avisados = {};
+try { avisados = JSON.parse(localStorage.getItem(AVK)) || {}; } catch(e){ avisados = {}; }
+const avKey = a => [a.id,a.fecha,a.hora,a.aviso].join('|');
+function revisarAvisos(){
+  const now = new Date(); let cambio = false;
+  for (const a of appts){
+    if (estadoDe(a)!=='pendiente') continue;
+    const k = avKey(a); if (avisados[k]) continue;
+    const ad = alertDate(a); if (!ad) continue;
+    if (now >= ad && now - ad < 12*3600*1000){
+      avisados[k] = 1; cambio = true;
+      const txt = `${quien(a).n!=='Sin asignar' ? quien(a).n+': ' : ''}${a.titulo} · ${a.hora ? 'hoy '+a.hora : fmtLargo(a)}`;
+      toast('Aviso: '+txt, {t:'Ver', f:()=>abrirDetalle(a.id)});
+      notificar('⏰ Mi agenda', txt, a.id);
+    } else if (now - ad >= 12*3600*1000){ avisados[k] = 1; cambio = true; }
+  }
+  if (cambio) { try { localStorage.setItem(AVK, JSON.stringify(avisados)); } catch(e){} }
+}
+
+async function notificar(titulo, cuerpo, citaId){
+  try{
+    if (!window.Notification || Notification.permission!=='granted' || !navigator.serviceWorker) return;
+    const reg = await Promise.race([navigator.serviceWorker.ready, new Promise(r=>setTimeout(()=>r(null),3000))]);
+    if (reg) await reg.showNotification(titulo, {body:cuerpo, icon:'icons/icon-192.png', badge:'icons/badge-96.png', tag:'agenda-'+Date.now(), data:{agenda:true, citaId}});
+  }catch(e){}
+}
+
+/* ---------- lista ---------- */
+const $ = s => document.querySelector(s);
+let tab = 'prox', filtro = 'todas', filtroQ = 'all', consulta = '';
+let vista = (() => { try { return localStorage.getItem('agenda:vista') || 'lista'; } catch(e){ return 'lista'; } })();
+if (!['lista','mes','anio'].includes(vista)) vista = 'lista';
+const _hoy = new Date();
+let mesVer = new Date(_hoy.getFullYear(), _hoy.getMonth(), 1), diaSel = iso(_hoy), anioVer = _hoy.getFullYear();
+function ponVista(v){ vista = v; try { localStorage.setItem('agenda:vista', v); } catch(e){} render(); }
+
+function estadoDe(a){ return a.estado || (a.hecha ? 'hecha' : 'pendiente'); }
+function esProxima(a){ return a.fecha >= iso(new Date()); }
+const ETQ = {pendiente:'Pendiente', hecha:'Realizada', cancelada:'Cancelada'};
+const SIM = {pendiente:'○', hecha:'✔', cancelada:'✕'};
+const MES_C = ['#1D4F91','#7B2D8E','#B3262E','#B45309','#7A6200','#2F7D32','#0E7C86','#3949AB','#AD1457','#5D4037','#00695C','#455A64'];
+const colorMes = a => MES_C[Number(a.fecha.slice(5,7))-1] || '#455A64';
+function tinta(hex){
+  const n = parseInt(hex.slice(1),16), f = v => { v/=255; return v<=.03928 ? v/12.92 : Math.pow((v+.055)/1.055,2.4); };
+  const L = .2126*f(n>>16&255) + .7152*f(n>>8&255) + .0722*f(n&255);
+  return L > .179 ? '#111820' : '#FFFFFF';
+}
+function ponEstado(a, e){ a.estado = e; a.hecha = (e==='hecha'); guardar(); render(); }
+function elegirEstado(a, despues){
+  const d = $('#dlg'), act = estadoDe(a);
+  const cierra = () => { d.classList.remove('open'); d.replaceChildren(); };
+  const op = (e, txt) => h('button',{type:'button',class:'btn est '+e,'aria-pressed':String(act===e),text:txt,onclick:()=>{ cierra(); ponEstado(a,e); if (despues) despues(); }});
+  d.replaceChildren(h('div',{class:'box'},
+    h('p',{text:a.titulo,style:'text-transform:uppercase;font-weight:700'}),
+    op('hecha','✔ REALIZADA'), op('cancelada','✕ CANCELADA'), op('pendiente','○ PENDIENTE'),
+    h('button',{type:'button',class:'btn',text:'Cerrar',onclick:cierra})));
+  d.classList.add('open');
+}
+function cabecera(g, a){
+  if (['Hoy','Mañana','Próximos 7 días'].includes(g)) return h('h2',{class:'grp dia',text:g});
+  const m = g.match(/^(\S+)(?: de)? (\d{4})$/);
+  return h('h2',{class:'grp',style:`--m:${colorMes(a)}`}, h('span',{text:m ? m[1] : g}), h('small',{text:m ? m[2] : '',style:'font-size:16px;font-weight:400;opacity:.92'}));
+}
+function grupoDe(a){
+  const t = new Date(); t.setHours(0,0,0,0);
+  const s = startDate(a); const s0 = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+  const dif = Math.round((s0 - t)/864e5);
+  if (dif===0) return 'Hoy';
+  if (dif===1) return 'Mañana';
+  if (dif>1 && dif<=7) return 'Próximos 7 días';
+  return cap(new Intl.DateTimeFormat('es-ES',{month:'long',year:'numeric'}).format(s));
+}
+function renderChips(){
+  const bq = $('#chipsQ'); bq.replaceChildren();
+  const sinAsig = appts.some(a => a.de!=='familia' && !miembros.some(m=>m.id===a.de));
+  const hayFam = appts.some(a => a.de==='familia');
+  const quienes = [{id:'all',n:'Todos',c:null}, ...miembros, ...(hayFam?[FAMILIA]:[]), ...(sinAsig?[NADIE]:[])];
+  for (const m of quienes)
+    bq.append(h('button',{class:'chip','aria-pressed':String(filtroQ===m.id),onclick:()=>{filtroQ=m.id;render();}},
+      m.c ? h('span',{class:'dot',style:`background:${m.c}`}) : null, m.n));
+  bq.append(h('button',{class:'chip',onclick:abrirFamilia,text:'✎ Familia'}));
+  const box = $('#chips'); box.replaceChildren();
+  const opts = [['todas','Todos los tipos'], ...Object.entries(CATS).map(([k,v])=>[k,v.n])];
+  for (const [k,n] of opts)
+    box.append(h('button',{class:'chip','aria-pressed':String(filtro===k),onclick:()=>{filtro=k;render();},text:n}));
+}
+function fila(a){
+  const w = quien(a), cat = tipoDe(a), est = estadoDe(a);
+  const dia = new Intl.DateTimeFormat('es-ES',{weekday:'short'}).format(startDate(a)).replace('.','');
+  const conQuien = (a.persona && !a.titulo.toLowerCase().includes(a.persona.toLowerCase())) ? a.persona : '';
+  const explica = [a.titulo, conQuien].filter(Boolean).join(' · ');
+  const pie = [cat.n, (a.fotos&&a.fotos.length) ? 'Foto' : ''].filter(Boolean).join(' · ');
+  return h('div',{class:'item '+est,style:`--c:${w.c};--t:${tinta(w.c)}`},
+    h('button',{class:'main',type:'button',onclick:()=>abrirDetalle(a.id)},
+      h('span',{class:'fecha'},
+        h('span',{class:'mes',style:`background:${colorMes(a)}`,text:fmtMes(a)}),
+        h('span',{class:'n',text:String(Number(a.fecha.slice(8)))}),
+        h('span',{class:'dia',text:dia})),
+      h('span',{class:'cuerpo'},
+        h('span',{class:'nombre',text:w.n}),
+        h('span',{class:'donde'}, h('span',{class:'hora',text:a.hora || 'Todo el día'}), a.lugar ? h('span',{text:' · '+a.lugar}) : null),
+        h('span',{class:'t',text:explica}),
+        h('span',{class:'s',text:pie}))),
+    h('button',{class:'estado '+est,type:'button','aria-label':'Estado: '+ETQ[est]+'. Pulsa para cambiar',onclick:()=>elegirEstado(a)},
+      h('span',{class:'sim',text:SIM[est]}), h('span',{text:ETQ[est]})));
+}
+function icono(n){
+  const p = {foto:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.2"/>',
+             campana:'<path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 004 0"/>'}[n];
+  const s = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  s.setAttribute('width','18'); s.setAttribute('height','18'); s.setAttribute('viewBox','0 0 24 24');
+  s.setAttribute('fill','none'); s.setAttribute('stroke','currentColor'); s.setAttribute('stroke-width','2');
+  s.setAttribute('stroke-linecap','round'); s.setAttribute('stroke-linejoin','round'); s.innerHTML = p; return s;
+}
+function render(){
+  $('#hoy').textContent = cap(new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric',month:'long'}).format(new Date()));
+  $('#tabProx').setAttribute('aria-selected', String(tab==='prox'));
+  $('#tabPas').setAttribute('aria-selected', String(tab==='pas'));
+  renderChips();
+  $('#tabsLista').hidden = vista !== 'lista';
+  for (const [id,v] of [['vLista','lista'],['vMes','mes'],['vAnio','anio']]) $('#'+id).setAttribute('aria-selected', String(vista===v));
+  const q = consulta.trim().toLowerCase();
+  let items = appts.filter(a => (tab==='prox') === esProxima(a))
+    .filter(a => filtroQ==='all' || (filtroQ==='' ? (a.de!=='familia' && !miembros.some(m=>m.id===a.de)) : a.de===filtroQ))
+    .filter(a => filtro==='todas' || a.cat===filtro)
+    .filter(a => !q || [a.titulo,a.lugar,a.persona,a.notas,quien(a).n].join(' ').toLowerCase().includes(q));
+  items.sort((x,y) => tab==='prox' ? startDate(x)-startDate(y) : startDate(y)-startDate(x));
+  const box = $('#lista'); box.replaceChildren();
+  if (vista !== 'lista'){ pintaCalendario(box, q); }
+  else if (!items.length){
+    box.append(h('div',{class:'vacio'},
+      h('b',{text: q||filtro!=='todas'||filtroQ!=='all' ? 'No hay resultados' : (tab==='prox' ? 'No tienes citas próximas' : 'Aún no hay citas pasadas')}),
+      (q||filtro!=='todas'||filtroQ!=='all'||tab==='pas') ? '' : 'Pulsa «Apuntar» para escribir una cita, o ⋮ → «Restaurar desde una copia» para traer tus citas.'));
+  } else {
+    let g = null;
+    for (const a of items){
+      const gr = tab==='prox' ? grupoDe(a) : cap(new Intl.DateTimeFormat('es-ES',{month:'long',year:'numeric'}).format(startDate(a)));
+      if (gr!==g){ g = gr; box.append(cabecera(g, a)); }
+      box.append(fila(a));
+    }
+  }
+  // aviso de lo más inmediato
+  const ab = $('#avisoBox'); ab.replaceChildren();
+  if (DB && listos.citas && !soloLectura && !yaPasado() && localInicial.citas.some(c => !appts.some(a=>a.id===c.id)))
+    ab.append(h('div',{class:'aviso'}, h('b',{text:'Tienes citas guardadas solo en este móvil'}), 'Aún no están en la agenda compartida.', h('button',{text:'Pasarlas a la agenda',onclick:recuperar})));
+  if (!appts.length) ab.append(h('div',{class:'aviso'}, h('b',{text:'Trae tus citas de «Mi agenda»'}), 'Elige el archivo de copia que te ha preparado Claude (agenda-copia….json).', h('button',{text:'Elegir archivo',onclick:()=>{ abrirMenu(); setTimeout(()=>{ const f = document.querySelector('.sheet input[type=file][accept*=json]'); if (f) f.click(); }, 50); }})));
+  if (!miembros.length && !soloLectura) ab.append(h('div',{class:'aviso'}, h('b',{text:'Empieza añadiendo a la familia'}), 'Así cada cita tendrá su color y sabréis de quién es.', h('button',{text:'Añadir personas',onclick:abrirFamilia})));
+  const sinMarcar = appts.filter(a => !esProxima(a) && estadoDe(a)==='pendiente').length;
+  if (tab==='prox' && !q && filtro==='todas' && filtroQ==='all' && sinMarcar)
+    ab.append(h('div',{class:'aviso'}, h('b',{text:`${sinMarcar} ${sinMarcar===1?'cita pasada sin marcar':'citas pasadas sin marcar'}`}), '¿Se fue o se canceló?', h('button',{text:'Revisar',onclick:()=>{ vista='lista'; tab='pas'; render(); }})));
+  const now = new Date(), lim = new Date(now.getTime()+24*3600*1000);
+  const prox = appts.filter(a=>esProxima(a) && estadoDe(a)==='pendiente' && startDate(a)<=lim && (a.hora ? startDate(a)>=new Date(now.getTime()-3600*1000) : true)).sort((x,y)=>startDate(x)-startDate(y));
+  if (tab==='prox' && !q && filtro==='todas' && filtroQ==='all' && prox.length){
+    const a = prox[0];
+    ab.append(h('div',{class:'aviso'},
+      h('b',{text: prox.length>1 ? `${prox.length} citas en las próximas 24 h` : 'Cita en las próximas 24 h'}),
+      `${a.titulo}${a.hora?' · '+a.hora:''}`,
+      h('button',{text:'Ver cita',onclick:()=>abrirDetalle(a.id)})));
+  }
+}
+
+/* ---------- vistas de calendario: mes y año ---------- */
+function citasFiltradas(q){
+  return appts
+    .filter(a => filtroQ==='all' || (filtroQ==='' ? (a.de!=='familia' && !miembros.some(m=>m.id===a.de)) : a.de===filtroQ))
+    .filter(a => filtro==='todas' || a.cat===filtro)
+    .filter(a => !q || [a.titulo,a.lugar,a.persona,a.notas,quien(a).n].join(' ').toLowerCase().includes(q));
+}
+function porDia(items){
+  const m = new Map();
+  for (const a of items){ if (!m.has(a.fecha)) m.set(a.fecha, []); m.get(a.fecha).push(a); }
+  for (const l of m.values()) l.sort((x,y) => startDate(x) - startDate(y));
+  return m;
+}
+function colorDia(lista){
+  const vivas = lista.filter(a => estadoDe(a) !== 'cancelada');
+  const cs = [...new Set((vivas.length ? vivas : lista).map(a => quien(a).c))];
+  if (cs.length === 1) return cs[0];
+  const paso = 360 / cs.length;
+  return `conic-gradient(${cs.map((c,i) => `${c} ${i*paso}deg ${(i+1)*paso}deg`).join(',')})`;
+}
+function celdaDia(ds, lista, extra){
+  const n = Number(ds.slice(8)), hay = lista && lista.length;
+  const nombre = new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'long'}).format(new Date(Number(ds.slice(0,4)), Number(ds.slice(5,7))-1, n));
+  const b = h('button',{type:'button',class:'cd'+(ds===iso(new Date())?' hoy':'')+(ds===diaSel?' sel':'')+(extra||''),'data-d':ds,
+    'aria-label': nombre + (hay ? ': ' + lista.length + (lista.length===1?' cita':' citas') : '')},
+    h('span',{class:'n',text:String(n)}), hay && lista.length > 1 ? h('span',{class:'k',text:String(lista.length)}) : null);
+  if (hay){
+    b.classList.add('has'); b.style.background = colorDia(lista);
+    if (lista.every(a => estadoDe(a)==='cancelada')) b.classList.add('canc');
+    else if (lista.every(a => estadoDe(a)!=='pendiente')) b.classList.add('ok');
+  }
+  return b;
+}
+function pintaCalendario(box, q){
+  const por = porDia(citasFiltradas(q));
+  if (vista === 'mes') pintaMes(box, por); else pintaAnio(box, por);
+}
+function pintaMes(box, por){
+  const y = mesVer.getFullYear(), m = mesVer.getMonth();
+  const nom = cap(new Intl.DateTimeFormat('es-ES',{month:'long'}).format(mesVer));
+  const first = new Date(y, m, 1), idx = (first.getDay() + 6) % 7, dim = new Date(y, m+1, 0).getDate(), filas = Math.ceil((idx + dim) / 7);
+  const ir = (dy) => { mesVer = new Date(y, m + dy, 1); render(); };
+  box.append(h('div',{class:'calh'},
+    h('button',{type:'button',class:'cnav','aria-label':'Mes anterior',text:'‹',onclick:()=>ir(-1)}),
+    h('h2',{class:'ctit'}, nom, h('small',{text:' '+y})),
+    h('button',{type:'button',class:'cnav','aria-label':'Mes siguiente',text:'›',onclick:()=>ir(1)}),
+    h('button',{type:'button',class:'cnav hoyb',text:'Hoy',onclick:()=>{ const t = new Date(); mesVer = new Date(t.getFullYear(), t.getMonth(), 1); diaSel = iso(t); render(); }})));
+  const g = h('div',{class:'cgrid'});
+  for (const x of ['L','M','X','J','V','S','D']) g.append(h('div',{class:'cdw',text:x}));
+  for (let i = 0; i < filas * 7; i++){
+    const dt = new Date(y, m, 1 - idx + i), ds = iso(dt);
+    g.append(celdaDia(ds, por.get(ds), dt.getMonth() !== m ? ' out' : ''));
+  }
+  g.addEventListener('click', e => {
+    const b = e.target.closest('.cd'); if (!b) return;
+    diaSel = b.dataset.d;
+    const dt = new Date(Number(diaSel.slice(0,4)), Number(diaSel.slice(5,7))-1, 1);
+    if (dt.getMonth() !== m) mesVer = dt;
+    render();
+  });
+  box.append(g);
+  box.append(h('p',{class:'leyenda',text:'El color del día es el de la persona. Si hay citas de varias personas, el día lleva varios colores y un número con las citas que hay.'}));
+  // citas del día elegido
+  const [yy, mm, dd] = diaSel.split('-').map(Number), lista = por.get(diaSel) || [];
+  box.append(h('h2',{class:'grp dia',text: cap(new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric',month:'long'}).format(new Date(yy, mm-1, dd)))}));
+  if (!lista.length) box.append(h('div',{class:'vacio',style:'padding:14px 10px'}, h('b',{text:'Sin citas este día'})));
+  for (const a of lista) box.append(fila(a));
+  box.append(h('button',{type:'button',class:'btn',text:'+ Apuntar una cita este día',onclick:()=>abrirForm(null, diaSel)}));
+}
+function pintaAnio(box, por){
+  const y = anioVer; let total = 0;
+  const wrap = h('div',{class:'ygrid'});
+  for (let m = 0; m < 12; m++){
+    const first = new Date(y, m, 1), idx = (first.getDay() + 6) % 7, dim = new Date(y, m+1, 0).getDate(); let n = 0;
+    const g = h('div',{class:'yg'});
+    for (let i = 0; i < idx; i++) g.append(h('span'));
+    for (let d = 1; d <= dim; d++){ const ds = `${y}-${pad(m+1)}-${pad(d)}`, l = por.get(ds); if (l) n += l.length; g.append(celdaDia(ds, l, '')); }
+    total += n;
+    wrap.append(h('div',{class:'ymes'},
+      h('button',{type:'button',class:'ytit',onclick:()=>{ mesVer = new Date(y, m, 1); ponVista('mes'); }},
+        h('span',{text:cap(new Intl.DateTimeFormat('es-ES',{month:'long'}).format(first))}), h('small',{text: n ? `${n} ${n===1?'cita':'citas'}` : ''})), g));
+  }
+  box.append(h('div',{class:'calh'},
+    h('button',{type:'button',class:'cnav','aria-label':'Año anterior',text:'‹',onclick:()=>{ anioVer--; render(); }}),
+    h('h2',{class:'ctit'}, String(y), h('small',{text: total ? `  ${total} ${total===1?'cita':'citas'}` : ''})),
+    h('button',{type:'button',class:'cnav','aria-label':'Año siguiente',text:'›',onclick:()=>{ anioVer++; render(); }}),
+    h('button',{type:'button',class:'cnav hoyb',text:'Hoy',onclick:()=>{ anioVer = new Date().getFullYear(); render(); }})));
+  wrap.addEventListener('click', e => {
+    const b = e.target.closest('.cd'); if (!b) return;
+    diaSel = b.dataset.d; mesVer = new Date(Number(diaSel.slice(0,4)), Number(diaSel.slice(5,7))-1, 1); ponVista('mes');
+  });
+  box.append(wrap);
+  box.append(h('p',{class:'leyenda',text:'Toca un día para ver sus citas, o el nombre de un mes para verlo entero.'}));
+}
+
+/* ---------- hoja (detalle / formulario / menú) ---------- */
+const sheet = $('#sheet');
+let sheetCierre = null;
+function abrirHoja(titulo, izq, der, contenido, alCerrar){
+  sheetCierre = alCerrar || null;
+  sheet.replaceChildren(
+    h('div',{class:'head'},
+      h('button',{class:'lnk',text:izq.t,onclick:izq.f}),
+      h('h3',{text:titulo}),
+      der ? h('button',{class:'lnk',text:der.t,onclick:der.f,id:'headDer'}) : null),
+    h('div',{class:'body'}, contenido));
+  sheet.classList.add('open'); sheet.scrollTop = 0;
+}
+function cerrarHoja(){ sheet.classList.remove('open'); sheet.replaceChildren(); sheetCierre=null; render(); }
+
+async function pintarFotos(cont, ids, conBorrar, alBorrar){
+  cont.replaceChildren();
+  for (const id of ids){
+    const u = await fotoURL(id); if (!u) continue;
+    const img = h('img',{src:u,alt:'Foto adjunta'});
+    img.addEventListener('click',()=>{ const lb=$('#lightbox'); lb.querySelector('img').src=u; lb.classList.add('open'); });
+    const f = h('div',{class:'foto'}, img);
+    if (conBorrar) f.append(h('button',{class:'x',type:'button','aria-label':'Quitar foto',text:'✕',onclick:()=>alBorrar(id)}));
+    cont.append(f);
+  }
+}
+$('#lightbox').addEventListener('click',()=>$('#lightbox').classList.remove('open'));
+
+/* detalle */
+function abrirDetalle(id){
+  const a = appts.find(x=>x.id===id); if (!a) return;
+  const cat = tipoDe(a);
+  const fotos = h('div',{class:'fotos'});
+  const dato = (k,v,extra) => v ? h('div',{class:'dato'}, h('span',{text:k}), h('span',{}, v, extra||null)) : null;
+  const cont = h('div',{class:'det'},
+    h('div',{class:'cat'}, h('span',{class:'dot',style:`background:${quien(a).c}`}), quien(a).n+' · '+cat.n+(estadoDe(a)==='hecha'?' · Realizada':estadoDe(a)==='cancelada'?' · Cancelada':'')),
+    h('h4',{text:a.titulo}),
+    h('div',{style:'margin-top:12px'}, h('b',{text:'¿De quién o de qué es?',style:'font-size:15px'}),
+      chipsDe(a.de||'', v=>{ a.de = v; guardar(); abrirDetalle(a.id); }, true)),
+    h('div',{style:'margin-top:8px'},
+      dato('Fecha', fmtLargo(a)),
+      dato('Hora', a.hora || 'Todo el día'),
+      dato('Lugar', a.lugar, h('a',{href:'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a.lugar),target:'_blank',rel:'noopener',style:'display:block;color:var(--accent);font-weight:700;margin-top:4px',text:'Abrir en mapas'})),
+      dato('Con', a.persona),
+      dato('Notas', a.notas),
+      dato('Aviso', avisoTxt(a))),
+    (a.fotos&&a.fotos.length) ? h('div',{style:'margin-top:14px'}, h('b',{text:'Fotos'}), fotos) : null,
+    h('a',{class:'btn pri',href:linkGoogle(a),target:'_blank',rel:'noopener',text:'Añadir al calendario del móvil'}),
+    h('button',{class:'btn est '+estadoDe(a),text:'Estado: '+ETQ[estadoDe(a)].toUpperCase()+' · cambiar',onclick:()=>elegirEstado(a,()=>abrirDetalle(a.id))}),
+    h('button',{class:'btn',text:'Editar',onclick:()=>abrirForm(a.id)}),
+    h('button',{class:'btn bad',text:'Eliminar cita',onclick:async()=>{
+      if (!(await confirmar('¿Eliminar esta cita y sus fotos?','Eliminar'))) return;
+      appts = appts.filter(x=>x.id!==a.id); guardar();
+      for (const f of (a.fotos||[])) if (!fotoEnUso(f)) await delFoto(f);
+      cerrarHoja();
+    }}));
+  abrirHoja('Apunte', {t:'‹ Volver',f:cerrarHoja}, null, cont);
+  if (a.fotos&&a.fotos.length) pintarFotos(fotos, a.fotos, false).then(()=>{
+    if (!fotos.children.length) fotos.append(h('div',{class:'nota',text:'Las fotos de esta cita están en el móvil donde se hicieron.'}));
+  });
+}
+function linkGoogle(a){
+  const s = startDate(a);
+  const f = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+  let dates;
+  if (a.hora){ const e = new Date(s.getTime()+3600000); dates = `${f(s)}T${pad(s.getHours())}${pad(s.getMinutes())}00/${f(e)}T${pad(e.getHours())}${pad(e.getMinutes())}00`; }
+  else { const e = new Date(s.getFullYear(),s.getMonth(),s.getDate()+1); dates = `${f(s)}/${f(e)}`; }
+  const det = [a.persona && 'Con: '+a.persona, a.notas].filter(Boolean).join('\n');
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent((quien(a).id ? quien(a).n+': ' : '')+a.titulo)+
+    '&dates='+dates+'&details='+encodeURIComponent(det)+'&location='+encodeURIComponent(a.lugar||'');
+}
+
+/* formulario */
+async function abrirForm(id, fechaIni){
+  const orig = id ? appts.find(x=>x.id===id) : null;
+  const d = orig ? JSON.parse(JSON.stringify(orig)) : {id:uid(),titulo:'',cat:Object.keys(CATS)[0],fecha:fechaIni||iso(new Date()),hora:'',lugar:'',persona:'',notas:'',aviso:'1d',de:ultimoDe,fotos:[]};
+  const nuevas = [];
+  const T = h('input',{class:'in up',id:'fTit',value:d.titulo,placeholder:'Ej.: Cardiología, ITV, Reunión…',autocomplete:'off'});
+  const F = h('input',{class:'in',type:'date',value:d.fecha});
+  const H = h('input',{class:'in',type:'time',value:d.hora});
+  const L = h('input',{class:'in up',value:d.lugar,placeholder:'Hospital, centro, dirección…'});
+  const P = h('input',{class:'in up',value:d.persona,placeholder:'Doctor/a, persona o empresa'});
+  const N = h('textarea',{class:'in up',placeholder:'Ir en ayunas, llevar informes, planta, box…'}); N.value = d.notas;
+  const A = h('select',{class:'in'});
+  function llenarAviso(){
+    const prev = A.value || d.aviso;
+    A.replaceChildren();
+    for (const [k,n] of (H.value?AVISOS_HORA:AVISOS_DIA)) A.append(h('option',{value:k,text:n}));
+    A.value = [...A.options].some(o=>o.value===prev) ? prev : (H.value ? '1d' : 'at');
+  }
+  llenarAviso(); H.addEventListener('change',llenarAviso);
+  const deBox = chipsDe(d.de||'', v=>{ d.de = v; }, true);
+  const catBox = h('div',{class:'cats'});
+  function pintaCats(){
+    catBox.replaceChildren();
+    for (const [k,v] of Object.entries(CATS))
+      catBox.append(h('button',{type:'button',class:'chip','aria-pressed':String(d.cat===k),onclick:()=>{d.cat=k;pintaCats();}},
+        v.n));
+  }
+  pintaCats();
+
+  const fotos = h('div',{class:'fotos'});
+  const refrescaFotos = () => pintarFotos(fotos, d.fotos, true, async fid => {
+    d.fotos = d.fotos.filter(x=>x!==fid);
+    if (nuevas.includes(fid)){ await delFoto(fid); nuevas.splice(nuevas.indexOf(fid),1); }
+    refrescaFotos(); estado();
+  });
+  const file = h('input',{type:'file',accept:'image/*',multiple:true,hidden:true});
+  const nota = h('div',{class:'nota',hidden:true});
+  const btnLeer = h('button',{type:'button',class:'btn',hidden:true,text:'Leer datos de la foto'});
+  let sample = null, imgsOk = false;
+  function estado(){ btnLeer.hidden = !(sample && imgsOk && d.fotos.length); }
+  file.addEventListener('change', async () => {
+    for (const f of file.files){
+      try{
+        const b = await comprimir(f); const fid = uid();
+        await putFoto(fid, b); d.fotos.push(fid); nuevas.push(fid);
+      }catch(e){ toast('No pude abrir una de las fotos'); }
+    }
+    file.value=''; refrescaFotos(); estado();
+  });
+  btnLeer.addEventListener('click', async () => {
+    btnLeer.disabled = true; nota.hidden = false; nota.className='nota'; nota.textContent = 'Leyendo la foto…';
+    try{
+      const lim = await sample.limits();
+      const max = lim.images ? lim.images.maxCount : 1;
+      const blobs = [];
+      for (const fid of d.fotos.slice(0,max)){ const b = await getFoto(fid); if (b) blobs.push(b); }
+      const hoy = iso(new Date());
+      const r = await sample.json(
+        `Estas imágenes son fotos de una cita (cita médica, volante, carta, SMS, trámite…). Hoy es ${hoy}. ` +
+        `Extrae solo lo que se vea claramente; si un dato no aparece, deja cadena vacía. No inventes nada. ` +
+        `Responde únicamente con un objeto JSON con estas claves: ` +
+        `{"titulo": "texto corto, p. ej. 'Cardiología' o 'Análisis de sangre'", "categoria": "identificador del tipo (uno de: ${tiposTxt()})", ` +
+        `"fecha": "YYYY-MM-DD (si falta el año, usa el próximo que tenga sentido desde hoy)", "hora": "HH:MM en 24 h", ` +
+        `"lugar": "centro y dirección si aparecen", "persona": "médico/a o servicio", ` +
+        `"notas": "indicaciones importantes: ayunas, documentación, planta, nº de cita, teléfono", "paciente": "nombre de la persona a quien corresponde la cita, tal como aparece, o vacío"}`,
+        {images: blobs, modelTier:'default', cache:false});
+      let n = 0;
+      const ponIn = (el,v) => { if (v && typeof v==='string'){ el.value = v.toLocaleUpperCase('es-ES'); n++; } };
+      ponIn(T, r.titulo);
+      if (r.categoria && CATS[r.categoria]){ d.cat = r.categoria; pintaCats(); }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(r.fecha||'')){ F.value = r.fecha; n++; }
+      if (/^\d{1,2}:\d{2}$/.test(r.hora||'')){ H.value = r.hora.padStart(5,'0'); n++; llenarAviso(); }
+      ponIn(L, r.lugar); ponIn(P, r.persona);
+      const mid = buscaMiembro(r.paciente); if (mid){ d.de = mid; deBox.set(mid); n++; }
+      if (r.notas && typeof r.notas==='string'){ N.value = N.value ? N.value+'\n'+r.notas : r.notas; n++; }
+      nota.className='nota ok';
+      nota.textContent = n ? 'He rellenado los datos que se leían en la foto. Revísalos antes de guardar, sobre todo fecha y hora.' : 'No he podido leer datos claros en la foto. Puedes escribirlos a mano.';
+    }catch(e){
+      nota.className='nota';
+      nota.textContent = e && e.code==='not_granted' ? 'Has rechazado el permiso para leer la foto. Puedes rellenar los datos a mano.' :
+                         e && e.code==='rate_limited' ? 'Demasiadas peticiones seguidas. Espera un momento y vuelve a probar.' :
+                         'No he podido leer la foto ahora mismo. Rellena los datos a mano.';
+    }finally{ btnLeer.disabled = false; }
+  });
+
+  const guardarForm = () => {
+    if (!T.value.trim()){ T.focus(); toast('Falta el título de la cita'); return; }
+    if (!F.value){ F.focus(); toast('Falta la fecha'); return; }
+    Object.assign(d,{titulo:may(T.value),fecha:F.value,hora:H.value,lugar:may(L.value),persona:may(P.value),notas:N.value.trim(),aviso:A.value});
+    d.avisado = false; ultimoDe = d.de || ultimoDe;
+    if (orig){
+      const quitadas = (orig.fotos||[]).filter(x=>!d.fotos.includes(x));
+      appts[appts.findIndex(x=>x.id===d.id)] = d;
+      quitadas.filter(x=>!fotoEnUso(x)).forEach(delFoto);
+    } else appts.push(d);
+    nuevas.length = 0; guardar(); cerrarHoja();
+    toast(orig ? 'Cambios guardados' : 'Cita guardada');
+    if (!orig) notificar('✅ Apuntado en Mi agenda', `${d.titulo} · ${fmtLargo(d)}${d.hora?' · '+d.hora:''}\nToca para revisarlo`, d.id);
+  };
+  const cancelar = async () => { for (const f of nuevas) await delFoto(f); cerrarHoja(); };
+
+  const cont = h('div',{},
+    h('label',{class:'f'},'Título',T),
+    h('div',{class:'f',style:'margin-top:14px'}, h('b',{text:'¿De quién o de qué es?',style:'font-size:15px'}), deBox),
+    h('div',{class:'f',style:'margin-top:14px'}, h('b',{text:'Tipo',style:'font-size:15px'}), catBox),
+    h('div',{class:'row2'},
+      h('label',{class:'f'},'Fecha',F),
+      h('label',{class:'f'},h('span',{},'Hora ',h('small',{text:'(opcional)'})),H)),
+    h('label',{class:'f'},'Lugar',L),
+    h('label',{class:'f'},'Médico o con quién',P),
+    h('label',{class:'f'},'Notas',N),
+    h('label',{class:'f'},'Aviso',A),
+    h('div',{class:'f'}, h('b',{text:'Fotos',style:'font-size:15px'}), fotos),
+    file,
+    h('button',{type:'button',class:'btn',text:'Añadir foto (cámara o galería)',onclick:()=>file.click()}),
+    btnLeer, nota,
+    h('button',{type:'button',class:'btn pri',text:'Guardar',onclick:guardarForm}));
+  abrirHoja(orig?'Editar apunte':'Nuevo apunte', {t:'Cancelar',f:cancelar}, null, cont, cancelar);
+  refrescaFotos();
+  if (!orig) setTimeout(()=>T.focus(),50);
+  // ¿se puede leer la foto con Claude?
+  try{
+    if (window.claude && claude.use){
+      sample = await claude.use('sample');
+      if (sample){ const l = await sample.limits().catch(()=>null); imgsOk = !!(l && l.images); }
+      estado();
+    }
+  }catch(e){ sample = null; }
+}
+
+/* importar varias citas desde fotos o texto */
+function fotoEnUso(id){ return appts.some(a => (a.fotos||[]).includes(id)); }
+function promptImp(txt){
+  return `Hoy es ${iso(new Date())}. ` +
+    (txt ? `Este texto es una lista de citas escritas o dictadas:\n\n${txt}\n\n` : 'La imagen es una página de una agenda en papel (a menudo manuscrita) o un papel de cita (carta, volante, SMS impreso). ') +
+    'Extrae TODAS las citas o eventos con fecha que aparezcan: de cualquier tipo (médicas, trámites, trabajo, casa, coche, colegio, personales…). Ignora notas sin fecha, listas, teléfonos sueltos y garabatos. Si falta el año, deduce el más lógico a partir de hoy y de lo que se vea en la página. No inventes nada: si algo no se lee bien, déjalo vacío y pon "dudoso": true. Responde solo con un array JSON; cada elemento: {"titulo":"texto corto","categoria":"identificador del tipo (uno de: ' + tiposTxt() + ')","fecha":"YYYY-MM-DD","hora":"HH:MM o vacío","lugar":"","persona":"","notas":"","paciente":"nombre de la persona a quien corresponde la cita, si aparece","dudoso":false}. Si no hay ninguna cita, responde [].';
+}
+function normaliza(c){
+  if (!c || typeof c.titulo!=='string' || !c.titulo.trim()) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(c.fecha||'')) return null;
+  const hora = /^\d{1,2}:\d{2}$/.test(c.hora||'') ? c.hora.padStart(5,'0') : '';
+  const s = v => (typeof v==='string' ? v.trim() : '');
+  const p = {titulo:may(c.titulo), cat:CATS[c.categoria]?c.categoria:(CATS.otra?'otra':Object.keys(CATS)[0]), fecha:c.fecha, hora,
+    lugar:may(s(c.lugar)), persona:may(s(c.persona)), notas:s(c.notas), dudoso:!!c.dudoso, de:buscaMiembro(c.paciente)};
+  p.pasada = p.fecha < iso(new Date());
+  p.dup = appts.some(a => a.fecha===p.fecha && (a.hora||'')===p.hora && a.titulo.toLowerCase()===p.titulo.toLowerCase());
+  p.sel = !p.pasada && !p.dup;
+  return p;
+}
+async function abrirImportar(){
+  let sample = null, imgsOk = false;
+  try{
+    if (window.claude && claude.use){
+      sample = await claude.use('sample');
+      if (sample){ const l = await sample.limits().catch(()=>null); imgsOk = !!(l && l.images); }
+    }
+  }catch(e){ sample = null; }
+  if (!sample){
+    abrirHoja('Importar citas', {t:'‹ Volver',f:cerrarHoja}, null, h('div',{class:'nota',text:'La lectura automática no está disponible aquí. Ábrela desde claude.ai o desde la app de Claude.'}));
+    return;
+  }
+  const fuentes = [];
+  let props = [];
+  const thumbs = h('div',{class:'fotos'});
+  const file = h('input',{type:'file',accept:'image/*',multiple:true,hidden:true});
+  const texto = h('textarea',{class:'in',placeholder:'…o pega o dicta aquí tus citas. Ej.: «12 de noviembre, 9:30, dentista, c/ Mayor 5»'});
+  const btnLeer = h('button',{type:'button',class:'btn pri',text:'Leer citas'});
+  const prog = h('div',{class:'nota',hidden:true});
+  const out = h('div');
+  const pintaThumbs = () => {
+    thumbs.replaceChildren();
+    fuentes.forEach((f,i) => {
+      thumbs.append(h('div',{class:'foto'}, h('img',{src:f.url,alt:'Foto '+(i+1)}),
+        h('button',{class:'x',type:'button','aria-label':'Quitar foto',text:'✕',onclick:()=>{ URL.revokeObjectURL(f.url); fuentes.splice(i,1); pintaThumbs(); }})));
+    });
+  };
+  file.addEventListener('change', async () => {
+    for (const f of file.files){
+      try{ const b = await comprimir(f); fuentes.push({blob:b,url:URL.createObjectURL(b)}); }
+      catch(e){ toast('No pude abrir una de las fotos'); }
+    }
+    file.value=''; pintaThumbs();
+  });
+  function pintaRevision(){
+    out.replaceChildren();
+    if (!props.length){
+      out.append(h('div',{class:'nota',text:'No he encontrado citas con fecha. Prueba con una foto más cerca y con buena luz, o escríbelas en el cuadro de texto.'}));
+      return;
+    }
+    const hoy = iso(new Date());
+    const adj = h('input',{type:'checkbox',class:'chk'}); adj.checked = true;
+    const btnAdd = h('button',{type:'button',class:'btn pri'});
+    const act = () => { const n = props.filter(p=>p.sel).length; btnAdd.textContent = n ? `Añadir ${n} ${n===1?'cita':'citas'}` : 'Nada seleccionado'; btnAdd.disabled = !n; };
+    out.append(h('h2',{class:'grp',text:`He encontrado ${props.length} ${props.length===1?'cita':'citas'}. Corrige lo que haga falta`}));
+    out.append(h('div',{style:'margin:0 0 12px'}, h('b',{text:'Asignar todas a',style:'font-size:15px'}), chipsDe('', v=>{ props.forEach(p=>{ p.de = v; }); pintaRevision(); })));
+    for (const p of props){
+      const cb = h('input',{type:'checkbox',class:'chk','aria-label':'Incluir esta cita'}); cb.checked = p.sel;
+      cb.addEventListener('change',()=>{ p.sel = cb.checked; act(); });
+      const t = h('input',{class:'in up',value:p.titulo,'aria-label':'Título'}); t.addEventListener('input',()=>{ p.titulo = t.value; });
+      const f = h('input',{class:'in',type:'date',value:p.fecha,'aria-label':'Fecha'}); f.addEventListener('change',()=>{ p.fecha = f.value; });
+      const hh = h('input',{class:'in',type:'time',value:p.hora,'aria-label':'Hora'}); hh.addEventListener('change',()=>{ p.hora = hh.value; });
+      const selDe = h('select',{class:'in','aria-label':'De quién'});
+      selDe.append(h('option',{value:'',text:'¿De quién? (sin asignar)'}));
+      for (const m of [...miembros, FAMILIA]) selDe.append(h('option',{value:m.id,text:m.n}));
+      selDe.value = p.de || ''; selDe.addEventListener('change',()=>{ p.de = selDe.value; });
+      const tags = [p.dudoso&&'Revisar', p.pasada&&'Pasada', p.dup&&'Ya existe'].filter(Boolean).map(x=>h('span',{class:'tag',text:x}));
+      const sub = [p.persona,p.lugar,p.notas].filter(Boolean).join(' · ');
+      out.append(h('div',{class:'imp'},
+        h('div',{class:'r1'}, cb, h('div',{style:'flex:1;min-width:0'}, t)),
+        h('div',{class:'r2'}, f, hh),
+        h('div',{style:'margin-top:8px'}, selDe),
+        sub ? h('div',{style:'color:var(--muted);font-size:15px;margin-top:8px',text:sub}) : null,
+        tags.length ? h('div',{},tags) : null));
+    }
+    if (props.some(p=>p.src)) out.append(h('label',{style:'display:flex;gap:10px;align-items:center;margin:14px 0 0'}, adj, 'Adjuntar la foto original a cada cita'));
+    btnAdd.addEventListener('click', async () => {
+      btnAdd.disabled = true; let n = 0; const lote = [];
+      for (const p of props.filter(x=>x.sel)){
+        if (!p.titulo.trim() || !p.fecha) continue;
+        const d = {id:uid(),titulo:may(p.titulo),cat:p.cat,fecha:p.fecha,hora:p.hora||'',lugar:p.lugar,persona:p.persona,notas:p.notas,aviso:p.fecha<hoy?'none':'1d',de:p.de||'',fotos:[]};
+        if (adj.checked && p.src){
+          if (!p.src.fid){ p.src.fid = uid(); await putFoto(p.src.fid, p.src.blob); }
+          d.fotos = [p.src.fid];
+        }
+        const ad = alertDate(d); d.avisado = !!(ad && ad < new Date());
+        lote.push(d); n++;
+      }
+      if (!n){ btnAdd.disabled = false; toast('Faltan título o fecha en las citas marcadas'); return; }
+      appts.push(...lote); guardar(); cerrarHoja(); toast(`Añadidas ${n} ${n===1?'cita':'citas'}`);
+    });
+    out.append(btnAdd); act();
+  }
+  btnLeer.addEventListener('click', async () => {
+    const txt = texto.value.trim();
+    if (!fuentes.length && !txt){ toast('Añade fotos o escribe tus citas'); return; }
+    btnLeer.disabled = true; out.replaceChildren(); props = [];
+    const trabajos = [...fuentes.map(f=>({f})), ...(txt ? [{txt}] : [])];
+    let fallo = null;
+    for (let i=0; i<trabajos.length; i++){
+      const t = trabajos[i];
+      prog.hidden = false; prog.textContent = `Leyendo ${i+1} de ${trabajos.length}…`;
+      try{
+        const opts = {modelTier:'default', cache:false};
+        if (t.f) opts.images = [t.f.blob];
+        const r = await sample.json(promptImp(t.txt), opts);
+        const arr = Array.isArray(r) ? r : (r && Array.isArray(r.citas) ? r.citas : []);
+        for (const c of arr){ const p = normaliza(c); if (p){ p.src = t.f || null; props.push(p); } }
+      }catch(e){ fallo = (e && e.code) || 'otro'; if (fallo==='not_granted' || fallo==='rate_limited') break; }
+    }
+    props.sort((a,b)=> (a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+    prog.hidden = !fallo;
+    if (fallo) prog.textContent = fallo==='not_granted' ? 'Has rechazado el permiso para leer las fotos.' : fallo==='rate_limited' ? 'Demasiadas lecturas seguidas. Espera un momento y pulsa de nuevo.' : 'No pude leer alguna de las fotos. Revisa lo que sí salió.';
+    btnLeer.disabled = false; btnLeer.textContent = 'Leer de nuevo';
+    pintaRevision();
+  });
+  const huerf = await fotosHuerfanas();
+  const btnHuerf = huerf.length ? h('button',{type:'button',class:'btn',text:`Usar ${huerf.length} ${huerf.length===1?'foto guardada':'fotos guardadas'} sin cita`,onclick:()=>{
+    for (const f of huerf) if (!fuentes.some(x=>x.fid===f.id)) fuentes.push({blob:f.blob,url:URL.createObjectURL(f.blob),fid:f.id});
+    pintaThumbs();
+  }}) : null;
+  const cont = h('div',{},
+    h('div',{class:'nota',text:'Haz una foto a cada página de tu agenda o a cada papel (de frente y con buena luz), súbelas todas juntas y Claude lee las citas. Tú revisas la lista y las añades de golpe. Cada foto es una lectura con tu uso de Claude.'}),
+    imgsOk ? h('button',{type:'button',class:'btn',text:'Añadir fotos',onclick:()=>file.click()}) : h('div',{class:'nota',text:'Aquí no se pueden leer fotos; usa el cuadro de texto.'}),
+    file, btnHuerf, thumbs,
+    h('label',{class:'f'},'Texto',texto),
+    btnLeer, prog, out);
+  abrirHoja('Importar citas', {t:'Cancelar',f:cerrarHoja}, null, cont);
+}
+
+/* recuperar lo guardado solo en este móvil */
+function yaPasado(){ try { return localStorage.getItem('agenda:sync1')==='1'; } catch(e){ return false; } }
+async function recuperar(){
+  const viejas = (leeJSON(KEY) || []).filter(c => c && c.id && c.titulo && c.fecha);
+  if (!viejas.length){ toast('No hay citas antiguas guardadas en este móvil.'); return; }
+  const nuevas = viejas.filter(c => !appts.some(a=>a.id===c.id));
+  if (!nuevas.length){ toast('Las citas guardadas en este móvil ya están en la agenda.'); return; }
+  const ok = await confirmar(`He encontrado ${nuevas.length} ${nuevas.length===1?'cita guardada':'citas guardadas'} solo en este móvil. ¿Las paso a la agenda?`, 'Pasarlas', 'Ahora no');
+  if (!ok) return;
+  const vm = Array.isArray(leeJSON(KEYM)) && leeJSON(KEYM).length ? leeJSON(KEYM) : [{id:'yo', n:'Yo', c:PALETA[0]}];
+  vm.filter(m => m && m.id && !miembros.some(x=>x.id===m.id)).forEach(m => miembros.push(m));
+  nuevas.forEach(c => appts.push(c));
+  guardarM(); guardar(); render();
+  try { localStorage.setItem('agenda:sync1','1'); } catch(e){}
+  if (sheet.classList.contains('open')) cerrarHoja();
+  toast(`Pasadas ${nuevas.length} ${nuevas.length===1?'cita':'citas'} a la agenda`);
+}
+async function fotosHuerfanas(){
+  try {
+    const d = await idb();
+    const todas = await new Promise((res,rej)=>{ const r = d.transaction('f').objectStore('f').getAll(); r.onsuccess = ()=>res(r.result||[]); r.onerror = ()=>rej(r.error); });
+    return todas.filter(x => x && x.blob && !fotoEnUso(x.id));
+  } catch(e){ return []; }
+}
+
+/* contador de citas por persona y año */
+function abrirContador(){
+  const validas = appts.filter(a => a.fecha && estadoDe(a)!=='cancelada');
+  const cont = h('div');
+  if (!validas.length){
+    cont.append(h('div',{class:'nota',text:'Todavía no hay apuntes que contar.'}));
+  } else {
+    const anios = [...new Set(validas.map(a=>a.fecha.slice(0,4)))].sort((x,y)=>y.localeCompare(x));
+    const quienes = [...miembros, FAMILIA, NADIE];
+    for (const an of anios){
+      const delAnio = validas.filter(a=>a.fecha.slice(0,4)===an);
+      cont.append(h('div',{class:'anio'}, h('span',{text:an}), h('small',{text:`Total ${delAnio.length}`})));
+      for (const m of quienes){
+        const n = delAnio.filter(a => quien(a).id===m.id).length;
+        if (!n) continue;
+        cont.append(h('div',{class:'cont-row',style:`background:${m.c};color:${tinta(m.c)}`},
+          h('span',{class:'nom',text:m.n}), h('span',{class:'num',text:String(n)})));
+      }
+    }
+    cont.append(h('div',{class:'nota',style:'margin-top:16px',text:'Cuenta las citas pendientes y realizadas. No cuenta las canceladas.'}));
+  }
+  abrirHoja('Contador de citas', {t:'‹ Volver',f:cerrarHoja}, null, cont);
+}
+
+/* tipos de apunte */
+function abrirTipos(){
+  const lista = h('div');
+  function pinta(){
+    lista.replaceChildren();
+    for (const t of ajustes.tipos){
+      const nom = h('input',{class:'in up',value:t.n,maxlength:'24','aria-label':'Nombre del tipo'});
+      nom.addEventListener('change',()=>{ t.n = nom.value.trim() || t.n; nom.value = t.n; guardarAj(); });
+      const n = appts.filter(a=>a.cat===t.id).length;
+      lista.append(h('div',{class:'miem'}, nom,
+        h('div',{class:'pie'}, `${n} ${n===1?'apunte':'apuntes'}`,
+          h('button',{type:'button',class:'lnk',style:'color:var(--ribbon)',text:'Quitar',onclick:async()=>{
+            if (ajustes.tipos.length<=1){ toast('Debe quedar al menos un tipo'); return; }
+            if (!(await confirmar(`¿Quitar el tipo ${t.n}? Sus apuntes quedarán sin tipo.`,'Quitar'))) return;
+            ajustes.tipos = ajustes.tipos.filter(x=>x.id!==t.id); guardarAj(); pinta();
+          }}))));
+    }
+  }
+  const nuevo = h('input',{class:'in up',placeholder:'Ej.: Colegio, Coche, Casa, Banco…',maxlength:'24'});
+  const anadir = () => {
+    const n = nuevo.value.trim(); if (!n) return;
+    ajustes.tipos.push({id:uid(), n:n.slice(0,24)}); guardarAj(); nuevo.value=''; pinta();
+  };
+  nuevo.addEventListener('keydown',e=>{ if (e.key==='Enter') anadir(); });
+  const cont = h('div',{},
+    h('div',{class:'nota',text:'El tipo dice qué clase de apunte es (médica, trámite, colegio…). Puedes cambiar los nombres, quitar los que no uses y añadir los tuyos.'}),
+    h('div',{style:'margin-top:14px'}, lista),
+    h('label',{class:'f'},'Añadir tipo',nuevo),
+    h('button',{type:'button',class:'btn pri',text:'Añadir',onclick:anadir}));
+  abrirHoja('Tipos de apunte', {t:'Listo',f:cerrarHoja}, null, cont);
+  pinta();
+}
+
+/* familia y colores */
+function abrirFamilia(){
+  const lista = h('div'), aviso = h('div');
+  const sinDe = a => a.de!=='familia' && !miembros.some(m=>m.id===a.de);
+  function pinta(){
+    lista.replaceChildren(); aviso.replaceChildren();
+    for (const m of miembros){
+      const nom = h('input',{class:'in',value:m.n,maxlength:'24','aria-label':'Nombre'});
+      nom.addEventListener('change',()=>{ m.n = nom.value.trim() || m.n; nom.value = m.n; guardarM(); });
+      const sws = h('div',{class:'sws'});
+      for (const c of PALETA)
+        sws.append(h('button',{type:'button',class:'sw',style:`background:${c}`,'aria-label':'Elegir color','aria-pressed':String(m.c===c),onclick:()=>{ m.c = c; guardarM(); pinta(); }}));
+      const n = appts.filter(a=>a.de===m.id).length;
+      lista.append(h('div',{class:'miem'}, nom, sws,
+        h('div',{class:'pie'}, `${n} ${n===1?'cita':'citas'}`,
+          h('button',{type:'button',class:'lnk',style:'color:var(--ribbon)',text:'Quitar',onclick:async()=>{
+            if (miembros.length<=1){ toast('Debe quedar al menos una persona'); return; }
+            if (!(await confirmar(`¿Quitar a ${m.n}? Sus citas quedarán sin asignar.`,'Quitar'))) return;
+            appts.forEach(a=>{ if (a.de===m.id) a.de=''; });
+            miembros = miembros.filter(x=>x.id!==m.id); guardar(); guardarM(); pinta();
+          }}))));
+    }
+    lista.append(h('div',{style:'margin:20px 0 8px;font-weight:700'},'Apuntes sin dueño y de toda la familia'));
+    for (const clave of ['nadie','familia']){
+      const nom = h('input',{class:'in',value:ajustes[clave].n,maxlength:'24','aria-label':'Nombre'});
+      nom.addEventListener('change',()=>{ ajustes[clave].n = nom.value.trim() || ajustes[clave].n; nom.value = ajustes[clave].n; guardarAj(); });
+      const sws = h('div',{class:'sws'});
+      for (const c of PALETA)
+        sws.append(h('button',{type:'button',class:'sw',style:`background:${c}`,'aria-label':'Elegir color','aria-pressed':String(ajustes[clave].c===c),onclick:()=>{ ajustes[clave].c = c; guardarAj(); pinta(); }}));
+      const n = clave==='familia' ? appts.filter(a=>a.de==='familia').length : appts.filter(sinDe).length;
+      lista.append(h('div',{class:'miem'}, nom, sws,
+        h('div',{class:'pie'}, `${n} ${n===1?'apunte':'apuntes'}`, h('span',{text: clave==='nadie' ? 'Los que no tienen dueño' : 'Los de todos'}))));
+    }
+    const sin = appts.filter(sinDe).length;
+    if (sin) aviso.append(h('div',{class:'nota'},
+      h('b',{text:`Tienes ${sin} ${sin===1?'cita sin asignar':'citas sin asignar'}.`}), ' Asígnalas todas a una persona (luego puedes cambiar las que no sean suyas):',
+      chipsDe('', async v=>{
+        const p = v==='familia' ? FAMILIA : miembros.find(m=>m.id===v);
+        if (!(await confirmar(`¿Asignar las ${sin} citas sin asignar a ${p.n}?`,'Asignar'))){ pinta(); return; }
+        appts.forEach(a=>{ if (sinDe(a)) a.de = v; }); guardar(); pinta();
+      })));
+  }
+  const nuevo = h('input',{class:'in',placeholder:'Nombre (Ana, Hijo, COCHE, CASA…)',maxlength:'24'});
+  const anadir = () => {
+    const n = nuevo.value.trim(); if (!n) return;
+    const usados = miembros.map(m=>m.c);
+    const c = PALETA.find(x=>!usados.includes(x)) || PALETA[miembros.length % PALETA.length];
+    miembros.push({id:uid(), n, c}); guardarM(); nuevo.value=''; pinta();
+  };
+  nuevo.addEventListener('keydown',e=>{ if (e.key==='Enter') anadir(); });
+  const cont = h('div',{},
+    h('div',{class:'nota',text:'Cada persona, o cosa (COCHE, CASA, TRABAJO…), tiene su color: se ve en toda la tarjeta y en los filtros de arriba. También puedes cambiar el nombre y el color de «sin asignar».'}),
+    aviso, h('div',{style:'margin-top:14px'}, lista),
+    h('label',{class:'f'},'Añadir persona o cosa',nuevo),
+    h('button',{type:'button',class:'btn pri',text:'Añadir',onclick:anadir}),
+    h('button',{type:'button',class:'btn',text:'Editar tipos de apunte (médica, trámite…)',onclick:abrirTipos}));
+  abrirHoja('Familia y colores', {t:'Listo',f:cerrarHoja}, null, cont);
+  pinta();
+}
+
+/* menú: copia de seguridad y avisos */
+function abrirMenu(){
+  const sub = h('div',{class:'nota'},'Las citas se guardan en este móvil. Haz una copia de seguridad de vez en cuando.');
+  const file = h('input',{type:'file',accept:'application/json,.json',hidden:true});
+  file.addEventListener('change', async () => {
+    try{
+      const txt = await file.files[0].text(); const j = JSON.parse(txt);
+      if (!j || !Array.isArray(j.citas)) throw new Error('formato');
+      if (j.ajustes && typeof j.ajustes==='object'){ ajustes = ajNorm(j.ajustes); guardarAj(); }
+      // Si solo está la persona «Yo» que se crea por defecto y no tiene citas, la cambia la de la copia
+      if (Array.isArray(j.miembros) && j.miembros.length && miembros.length===1 && miembros[0].id==='yo' && !appts.some(a=>a.de==='yo')) miembros = [];
+      if (Array.isArray(j.miembros)){ for (const m of j.miembros) if (m && m.id && m.n && !miembros.some(x=>x.id===m.id)) miembros.push({id:m.id,n:m.n,c:m.c||PALETA[0]}); guardarM(); }
+      let n = 0; const lote = [];
+      for (const c of j.citas){
+        const fotos = c.fotos || []; const ids = [];
+        for (const f of fotos){
+          if (!f || !f.data) continue;
+          const [meta,b64] = f.data.split(','); const bin = atob(b64); const u8 = new Uint8Array(bin.length);
+          for (let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+          await putFoto(f.id, new Blob([u8],{type:(meta.match(/:(.*?);/)||[])[1]||'image/jpeg'})); ids.push(f.id);
+        }
+        const nueva = {...c, fotos: ids};
+        lote.push(nueva); n++;
+      }
+      for (const nueva of lote){ const i = appts.findIndex(x=>x.id===nueva.id); if (i>=0) appts[i]=nueva; else appts.push(nueva); }
+      guardar(); cerrarHoja(); toast(`Importadas ${n} citas`); try { localStorage.setItem('agenda:sync1','1'); } catch(e){}
+    }catch(e){ toast('Ese archivo no es una copia válida de la agenda'); }
+    file.value='';
+  });
+  const exportar = async () => {
+    try{
+      const citas = [];
+      for (const a of appts){
+        const fotos = [];
+        for (const id of (a.fotos||[])){
+          const b = await getFoto(id); if (!b) continue;
+          const data = await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(b); });
+          fotos.push({id,data});
+        }
+        citas.push({...a, fotos});
+      }
+      const blob = new Blob([JSON.stringify({version:2,citas,miembros,ajustes})], {type:'application/json'});
+      const a = h('a',{href:URL.createObjectURL(blob),download:`agenda-copia-${iso(new Date())}.json`});
+      document.body.append(a); a.click(); a.remove();
+      toast('Copia guardada en Descargas');
+    }catch(e){ toast('No se pudo crear la copia'); }
+  };
+  const permiso = (window.Notification) ? Notification.permission : 'unsupported';
+  const cont = h('div',{},
+    h('button',{class:'btn',text:'Familia y colores',style:'margin-top:0',onclick:abrirFamilia}),
+    h('button',{class:'btn',text:'Tipos de apunte',onclick:abrirTipos}),
+    h('button',{class:'btn',text:'Buscar citas guardadas en este móvil',onclick:recuperar}),
+    sub,
+    h('button',{class:'btn pri',text:'Guardar copia de seguridad',onclick:exportar}),
+    h('button',{class:'btn',text:'Restaurar desde una copia',onclick:()=>file.click()}), file,
+    h('div',{class:'nota',style:'margin-top:22px'},'Los avisos de las citas solo saltan mientras Dilo está abierta. Para que el móvil te avise con la app cerrada, usa «Añadir al calendario del móvil» en cada cita.'),
+    permiso==='default' ? h('button',{class:'btn',text:'Permitir notificaciones',onclick:async()=>{ try{ await Notification.requestPermission(); }catch(e){} abrirMenu(); }}) : null);
+  abrirHoja('Opciones', {t:'‹ Volver',f:cerrarHoja}, null, cont);
+}
+
+/* ---------- arranque ---------- */
+$('#btnNueva').addEventListener('click',()=>abrirForm(null, vista==='mes' ? diaSel : undefined));
+$('#vLista').addEventListener('click',()=>ponVista('lista'));
+$('#vMes').addEventListener('click',()=>ponVista('mes'));
+$('#vAnio').addEventListener('click',()=>{ anioVer = mesVer.getFullYear(); ponVista('anio'); });
+$('#btnMenu').addEventListener('click',abrirMenu);
+$('#btnCont').addEventListener('click',abrirContador);
+$('#tabProx').addEventListener('click',()=>{tab='prox';render();});
+$('#tabPas').addEventListener('click',()=>{tab='pas';render();});
+$('#q').addEventListener('input',e=>{consulta=e.target.value;render();});
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ render(); revisarAvisos(); } });
+render(); revisarAvisos(); setInterval(revisarAvisos, 30000); iniciarSync();
+const pCita = new URLSearchParams(location.search).get('cita');
+if (pCita && appts.some(a=>a.id===pCita)) abrirDetalle(pCita);
+if ('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).catch(()=>{});
+  navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.openCita && appts.some(a=>a.id===e.data.openCita)) abrirDetalle(e.data.openCita); });
+}
+})();
+</script>
+</body>
+</html>
