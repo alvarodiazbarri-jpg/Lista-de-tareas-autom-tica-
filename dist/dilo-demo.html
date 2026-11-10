@@ -102,6 +102,22 @@ main, .home-head, .list-head {
   background: var(--voice); font-size: 1.2rem; box-shadow: var(--shadow);
 }
 .hh-text { flex: 1; min-width: 0; }
+.firma {
+  display: inline-block; vertical-align: 4px; margin-left: 6px; padding: 2px 8px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--voice), #C2185B); color: #fff;
+  font-family: var(--font-body); font-size: .62rem; font-weight: 700; letter-spacing: .08em; white-space: nowrap;
+}
+.firma-larga { margin: 4px 0 0; font-size: .85rem; color: var(--muted); }
+.firma-larga b { color: var(--voice); letter-spacing: .06em; }
+.help-sub { font-size: 1.05rem !important; margin-top: 14px !important; }
+.paletas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 6px 0 14px; }
+.pal {
+  display: grid; gap: 6px; padding: 8px; border-radius: 12px; text-align: left;
+  border: 2px solid var(--line); background: var(--surface-2); font-weight: 700; font-size: .9rem;
+}
+.pal[aria-pressed="true"] { border-color: var(--voice); }
+.pal-muestra { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
+.pal-muestra i { height: 18px; border-radius: 5px; }
 .hh-title {
   margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 1.35rem;
   line-height: 1.05; letter-spacing: -.01em;
@@ -189,39 +205,41 @@ main, .home-head, .list-head {
 .tiles-inner { display: contents; }
 .tile {
   --hue: var(--ink);
-  position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; min-height: 0;
-  padding: 12px; border-radius: 16px; text-align: left; overflow: hidden;
-  border: 0; background: var(--hue); color: #fff;
-  box-shadow: 0 2px 6px rgb(0 0 0 / .18), inset 0 0 0 1px rgb(255 255 255 / .12);
-  background-image: linear-gradient(160deg, rgb(255 255 255 / .16), transparent 60%);
+  position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 4px; min-height: 0;
+  padding: 10px 12px 10px; border-radius: 18px; text-align: left; overflow: hidden;
+  border: 0; background: var(--hue-bg, var(--hue)); color: var(--tile-t, #fff);
+  box-shadow: 0 3px 8px rgb(0 0 0 / .2), inset 0 0 0 1px rgb(255 255 255 / .14);
 }
-.tile:active { transform: scale(.98); }
-.tile-top { display: flex; align-items: center; gap: 8px; }
+.tile:active { transform: scale(.97); }
+/* El icono es lo principal: grande y en el centro */
 .tile-emoji {
-  flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
-  font-size: 1.2rem; background: rgb(255 255 255 / .22);
+  flex: 1; min-height: 0; display: grid; place-items: center; line-height: 1;
+  font-size: clamp(1.4rem, calc(var(--th, 120px) * .36), 4.2rem);
+  filter: drop-shadow(0 3px 6px rgb(0 0 0 / .22));
 }
-.tile-count {
-  margin-left: auto; min-width: 28px; height: 28px; padding: 0 8px; border-radius: 14px;
-  display: grid; place-items: center; font-weight: 700; font-size: .9rem;
-  background: rgb(0 0 0 / .18); color: #fff;
-}
-.tile-count.has { background: #fff; color: var(--hue); }
+.tile-foot { display: block; min-width: 0; }
 .tile-name {
-  font-family: var(--font-display); font-weight: 700; font-size: 1.12rem; line-height: 1.15;
-  overflow-wrap: anywhere; text-shadow: 0 1px 2px rgb(0 0 0 / .2);
+  display: block; min-width: 0; text-align: center; font-family: var(--font-display); font-weight: 700;
+  font-size: 1.05rem; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-/* Muchas listas: tarjetas pequeñas, solo icono, número y nombre */
-.tiles.mini .tile { padding: 8px 10px 8px 12px; gap: 4px; justify-content: center; }
-.tiles.mini .tile-emoji { width: 28px; height: 28px; font-size: 1rem; border-radius: 8px; }
-.tiles.mini .tile-count { min-width: 24px; height: 24px; font-size: .8rem; }
-.tiles.mini .tile-name { font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+/* El número, en la esquina de arriba */
+.tile-count {
+  position: absolute; top: 8px; right: 8px;
+  min-width: 26px; height: 26px; padding: 0 8px; border-radius: 13px;
+  display: grid; place-items: center; font-weight: 700; font-size: .85rem;
+  background: rgb(0 0 0 / .16); color: inherit;
+}
+.tile-count.has { background: var(--tile-t, #fff); color: var(--hue); }
+/* Muchas listas: tarjetas pequeñas */
+.tiles.mini .tile { padding: 6px 8px; gap: 2px; border-radius: 14px; }
+.tiles.mini .tile-name { font-size: .9rem; }
+.tiles.mini .tile-count { top: 5px; right: 5px; min-width: 22px; height: 22px; font-size: .75rem; }
 /* Muchísimas listas: una fila por lista (icono, nombre y número) */
-.tiles.fila .tile { flex-direction: row; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border-radius: 12px; }
-.tiles.fila .tile-top { display: contents; }
-.tiles.fila .tile-emoji { width: 28px; height: 28px; font-size: 1rem; border-radius: 8px; }
-.tiles.fila .tile-name { order: 1; flex: 1; min-width: 0; font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
-.tiles.fila .tile-count { order: 2; margin-left: 0; min-width: 24px; height: 24px; font-size: .8rem; }
+.tiles.fila .tile { flex-direction: row; align-items: center; gap: 8px; padding: 6px 8px 6px 10px; border-radius: 12px; }
+.tiles.fila .tile-emoji { flex: none; font-size: 1.3rem; }
+.tiles.fila .tile-foot { flex: 1; display: flex; align-items: center; gap: 8px; }
+.tiles.fila .tile-name { flex: 1; text-align: left; font-size: .95rem; }
+.tiles.fila .tile-count { position: static; }
 .sec-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
 .sec-row .sec-title { margin: 0 2px; }
 .sec-add {
@@ -445,7 +463,7 @@ dialog li { margin-bottom: 6px; }
   <header class="home-head" id="homeHead">
     <span class="hh-logo" aria-hidden="true">🎙️</span>
     <div class="hh-text">
-      <h1 class="hh-title">Dilo</h1>
+      <h1 class="hh-title">Dilo <span class="firma">APP by BARRI</span></h1>
       <p class="hh-date" id="hoyFecha"></p>
     </div>
     <button id="cloudChip" class="avatar-btn" type="button" aria-label="Nube y familia">☁️</button>
@@ -553,9 +571,12 @@ dialog li { margin-bottom: 6px; }
     <p>Si no hay conexión o el navegador no reconoce la voz, se graba el audio y lo encontrarás en la Bandeja de entrada.</p>
     <p>Al guardar una cita en <b>Mi agenda</b> te llega una <b>notificación</b> confirmándolo. En las listas no hace falta: lo ves en la pantalla al momento.</p>
     <p>En <b>⋯</b> de cada cosa apuntada puedes ponerle una <b>etiqueta</b> (urgente, informativa, curiosidad); las urgentes salen arriba.</p>
+    <h2 class="help-sub">Colores de las listas</h2>
+    <div id="paletas" class="paletas"></div>
     <button id="notifyBtn" type="button" class="ghost-btn notify-btn">🔔 Activar notificaciones</button>
     <form method="dialog"><button class="primary-btn">Entendido</button></form>
     <p id="version" class="version"></p>
+    <p class="firma-larga">Dilo · <b>APP by BARRI</b></p>
   </dialog>
 
   <dialog id="listMenu" class="sheet-dlg">
@@ -790,7 +811,7 @@ dialog li { margin-bottom: 6px; }
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.10';
+  const VERSION = '0.11';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -1366,14 +1387,43 @@ dialog li { margin-bottom: 6px; }
   });
 
   // ---------- Render ----------
-  // Color de cada lista (siempre el mismo para el mismo nombre, en todos los móviles)
-  const COLORES = ['#1D6FD1', '#2F8F6B', '#E08A00', '#8A4FBF', '#D1495B', '#0E9AA7', '#A8643A', '#558B2F'];
-  function colorDe(list) {
-    if (list.name === INBOX_NAME) return '#44515F';
-    const n = window.VoiceParser.normalize(list.name);
-    let h = 0;
-    for (const c of n) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-    return COLORES[h % COLORES.length];
+  // Colores de las listas: cada lista tiene un color distinto según su puesto (el mismo en todos los
+  // móviles, porque el orden de las listas está en la nube). Hay varios juegos para elegir en «?».
+  // Cada color: [fondo, fondo2 (para el degradado)]. La Bandeja de entrada va siempre en gris.
+  const PALETAS = {
+    vivos: { n: 'Vivos', bandeja: ['#546E7A', '#37474F'], c: [
+      ['#E53935', '#B71C1C'], ['#1E88E5', '#0D47A1'], ['#43A047', '#1B5E20'], ['#FB8C00', '#E65100'],
+      ['#8E24AA', '#4A148C'], ['#00ACC1', '#006064'], ['#D81B60', '#880E4F'], ['#6D4C41', '#3E2723'],
+      ['#3949AB', '#1A237E'], ['#7CB342', '#33691E'], ['#F4511E', '#BF360C'], ['#00897B', '#004D40']] },
+    pastel: { n: 'Pastel', bandeja: ['#CFD8DC', '#B0BEC5'], c: [
+      ['#FFCDD2', '#EF9A9A'], ['#BBDEFB', '#90CAF9'], ['#C8E6C9', '#A5D6A7'], ['#FFE0B2', '#FFCC80'],
+      ['#E1BEE7', '#CE93D8'], ['#B2EBF2', '#80DEEA'], ['#F8BBD0', '#F48FB1'], ['#D7CCC8', '#BCAAA4'],
+      ['#C5CAE9', '#9FA8DA'], ['#DCEDC8', '#C5E1A5'], ['#FFF9C4', '#FFF59D'], ['#B2DFDB', '#80CBC4']] },
+    profundos: { n: 'Profundos', bandeja: ['#37474F', '#263238'], c: [
+      ['#9B2335', '#6E1423'], ['#1F4E8C', '#12325E'], ['#2E6B3A', '#1B4424'], ['#A0520F', '#6E3708'],
+      ['#5B2E83', '#3A1C56'], ['#0F6B66', '#084642'], ['#8C1D56', '#5E1239'], ['#5A4034', '#3B2A22'],
+      ['#2B3A8C', '#1B255C'], ['#4F6B1E', '#334612'], ['#0D6577', '#08424E'], ['#7A3B12', '#50260B']] },
+    degradados: { n: 'Degradados', bandeja: ['#607D8B', '#37474F'], c: [
+      ['#FF5F6D', '#FFC371'], ['#36D1DC', '#5B86E5'], ['#56AB2F', '#A8E063'], ['#F7971E', '#FFD200'],
+      ['#8E2DE2', '#C86DD7'], ['#11998E', '#38EF7D'], ['#EC008C', '#FC6767'], ['#C79081', '#8E5A4B'],
+      ['#4776E6', '#8E54E9'], ['#F953C6', '#B91D73'], ['#00B4DB', '#0083B0'], ['#E96443', '#904E95']] },
+  };
+  const PALETA_KEY = 'dilo:paleta';
+  let paleta = (() => { try { return PALETAS[localStorage.getItem(PALETA_KEY)] ? localStorage.getItem(PALETA_KEY) : 'vivos'; } catch (e) { return 'vivos'; } })();
+  function coloresDe(list) {
+    const P = PALETAS[paleta];
+    if (list.name === INBOX_NAME) return P.bandeja;
+    const resto = state.lists.filter((l) => l.name !== INBOX_NAME);
+    const i = Math.max(0, resto.findIndex((l) => l.id === list.id));
+    return P.c[i % P.c.length];
+  }
+  const colorDe = (list) => coloresDe(list)[0];
+  function estiloTarjeta(list) {
+    const [c1, c2] = coloresDe(list);
+    // Letras blancas salvo en colores muy claros (pastel)
+    const t = luz(c1) > 0.45 ? '#16202B' : '#FFFFFF';
+    const fondo = paleta === 'degradados' ? `linear-gradient(135deg, ${c1}, ${c2})` : `linear-gradient(160deg, ${c1}, ${c2})`;
+    return `--hue:${c1};--hue-bg:${fondo};--tile-t:${t}`;
   }
 
   function render() {
@@ -1407,6 +1457,11 @@ dialog li { margin-bottom: 6px; }
   }
 
   // Color de contraste (negro o blanco) para escribir encima de un color
+  function luz(hex) {
+    const n = parseInt(String(hex).slice(1), 16);
+    const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+  }
   function tinta(hex) {
     const n = parseInt(String(hex).slice(1), 16);
     if (isNaN(n)) return '#fff';
@@ -1470,11 +1525,11 @@ dialog li { margin-bottom: 6px; }
     wrap.replaceChildren();
     for (const l of state.lists) {
       const pend = l.items.filter((i) => !i.done);
-      const tile = el('button', { class: 'tile', type: 'button', style: `--hue:${colorDe(l)}`, 'aria-label': `${l.name}, ${pend.length} pendientes` },
-        el('span', { class: 'tile-top' },
-          el('span', { class: 'tile-emoji', text: l.emoji }),
-          el('span', { class: 'tile-count' + (pend.length ? ' has' : ''), text: String(pend.length) })),
-        el('span', { class: 'tile-name', text: l.name }));
+      const tile = el('button', { class: 'tile', type: 'button', style: estiloTarjeta(l), 'aria-label': `${l.name}, ${pend.length} pendientes` },
+        el('span', { class: 'tile-emoji', text: l.emoji }),
+        el('span', { class: 'tile-foot' },
+          el('span', { class: 'tile-name', text: l.name }),
+          el('span', { class: 'tile-count' + (pend.length ? ' has' : ''), text: String(pend.length) })));
       tile.addEventListener('click', () => { openList(l.id); });
       wrap.appendChild(tile);
     }
@@ -1504,6 +1559,7 @@ dialog li { margin-bottom: 6px; }
     const h = Math.floor(Math.max(min, Math.min(ALTO_MAX, alto(cols))));
     grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
     grid.style.gridAutoRows = h + 'px';
+    grid.style.setProperty('--th', h + 'px');
     grid.classList.toggle('mini', estilo === 'mini' || (!estilo && h < 96));
     grid.classList.toggle('fila', estilo === 'fila');
   }
@@ -1594,7 +1650,7 @@ dialog li { margin-bottom: 6px; }
     const isInbox = list.name === INBOX_NAME;
     const pend = list.items.filter((i) => !i.done).sort((a, b) => pesoEtiqueta(a) - pesoEtiqueta(b));
     const hechas = list.items.filter((i) => i.done);
-    document.documentElement.style.setProperty('--hue', colorDe(list));
+    document.documentElement.style.setProperty('--hue', coloresDe(list)[paleta === 'pastel' ? 1 : 0]);
     $('listEmoji').textContent = list.emoji;
     $('title').textContent = list.name;
     $('listSub').textContent = list.items.length
@@ -1708,7 +1764,24 @@ dialog li { margin-bottom: 6px; }
 
   // ---------- Acciones de lista ----------
   $('backBtn').addEventListener('click', () => { currentListId = null; render(); window.scrollTo(0, 0); });
-  $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
+  $('helpBtn').addEventListener('click', () => { renderPaletas(); $('helpDialog').showModal(); });
+
+  // Elegir los colores de las listas (se guarda en este móvil)
+  function renderPaletas() {
+    const box = $('paletas');
+    box.replaceChildren();
+    for (const [id, P] of Object.entries(PALETAS)) {
+      const muestra = el('span', { class: 'pal-muestra' },
+        ...P.c.slice(0, 6).map(([c1, c2]) => el('i', { style: `background:linear-gradient(135deg, ${c1}, ${c2})` })));
+      const b = el('button', { class: 'pal', type: 'button', 'aria-pressed': String(id === paleta) }, muestra, el('span', { text: P.n }));
+      b.addEventListener('click', () => {
+        paleta = id;
+        try { localStorage.setItem(PALETA_KEY, id); } catch (e) {}
+        renderPaletas(); render();
+      });
+      box.append(b);
+    }
+  }
   $('version').textContent = 'Versión ' + VERSION;
   $('notifyBtn').addEventListener('click', askNotifyPermission);
   renderNotifyBtn();
@@ -1947,4 +2020,4 @@ dialog li { margin-bottom: 6px; }
   }, 60000);
 })();
 </script>
-  <script type="module" src="js/nube.js?v=0.10"></script>
+  <script type="module" src="js/nube.js?v=0.11"></script>

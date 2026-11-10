@@ -16,7 +16,7 @@ mande (en la lista: ⋯ → «📋 Copiar o compartir la lista») y pasar aquí 
 4. [x] **Las listas se ajustan a la pantalla** *Hecho en la versión 0.9.*: que la pantalla de inicio quepa siempre sin desplazarse; cuantas más listas haya, más pequeñas se hacen las tarjetas (y si no caben, quitar primero las cosas de vista previa y luego pasar a 3 columnas o a filas compactas).
 5. [ ] **Borrar por voz** (lo pidió Álvaro dos veces; es lo siguiente): «quita la leche de la compra», «borra pan», «elimina llamar al taller de tareas». Buscar la cosa apuntada aunque no se diga exactamente igual, borrarla con aviso y botón «Deshacer». Pensar también «marca la leche como hecha».
 6. [ ] **Listas privadas**: al crear o editar una lista, poder marcarla como «Solo para mí»: solo la ve quien la creó, en su móvil y con su cuenta (no la ve el resto de la casa). Las demás siguen compartidas. Hay que cambiar también las reglas de Firebase.
-7. [ ] **Nuevo icono de la app**: Álvaro tiene 4 ideas (bocadillo que habla, dicho y hecho, la «D» de Dilo, lista con micro); falta que elija una.
+7. [ ] **Nuevo icono de la app**: le gustó la idea «Lista con micro», con el nombre **DILOBARRI** o **BARRIDILO** dentro. Tiene 6 variantes (A verde, B DILO+BARRI en amarillo, C coral, D azul noche, E BARRIDILO, F cinta); falta que elija una.
 8. [ ] **Apuntar citas con la voz**: «cita con el dentista el martes a las 10 para Julia» → se guarda en Mi agenda con fecha, hora, lugar y persona, y llega la notificación de confirmación.
 9. [ ] **Recetas dentro de Dilo**, igual que se ha hecho con la agenda (copiar «Recetas de Karlos Bernal» y «Comidas de la semana»).
 10. [ ] **Leer citas desde fotos** (lo que hacía «Importar» en la Mi agenda de Claude): buscar otra forma, porque fuera de claude.ai no se puede usar a Claude así.
@@ -30,6 +30,7 @@ mande (en la lista: ⋯ → «📋 Copiar o compartir la lista») y pasar aquí 
 - [ ] Recuperar las fotos de las citas que se quedaron en la Mi agenda antigua (guardar copia de seguridad desde allí con las fotos y cargarla en Dilo).
 
 ## Hecho
+- [x] Versión 0.11: cada lista con un color distinto (según su puesto, igual en todos los móviles); 4 juegos de colores para elegir en «?» (Vivos, Pastel, Profundos, Degradados); tarjetas con el icono grande en el centro, el nombre debajo y el número en la esquina; firma «APP by BARRI» en la cabecera de Dilo y de Mi agenda y en «?».
 - [x] Versión 0.10: tarjetas de las listas de color entero (solo icono, nombre y número); la tarjeta de la agenda enseña todas las citas del próximo día, cada una con el color de su persona; etiquetas en cada cosa apuntada (Normal, Urgente, Informativa, Curiosidad; las urgentes arriba; se añaden más en `ETIQUETAS` de `js/app.js`); el aviso «Apuntado» de las listas ya no sale con Dilo abierta (en la agenda sí).
 - [x] Las tarjetas de las listas ocupan el hueco de la pantalla: grandes con pocas listas (con más cosas de vista previa), más pequeñas con muchas, 3 columnas y luego filas. «+ Nueva lista» pasa a un botón junto a «Tus listas». Opción «📋 Copiar o compartir la lista» en ⋯ (versión 0.9).
 - [x] El autor de cada cosa ya no se borra si otro móvil tiene una versión antigua; en ☁️ se ve qué versión de Dilo tiene cada persona (versión 0.8.2).

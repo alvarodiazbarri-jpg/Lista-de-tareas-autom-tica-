@@ -46,6 +46,7 @@ header.top{position:relative;padding:14px 0 14px}
 header.top .ribbon{position:absolute;right:56px;top:-6px;width:22px;height:54px;background:var(--ribbon);
   clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%)}
 header.top h1{margin:0;font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-.01em}
+.firma{display:inline-block;vertical-align:6px;margin-left:6px;padding:2px 8px;border-radius:8px;background:linear-gradient(135deg,#E4572E,#C2185B);color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;white-space:nowrap}
 header.top .hoy{margin:4px 0 0;color:var(--muted);font-size:16px}
 .menu-btn{position:absolute;right:-6px;top:18px;width:44px;height:44px;border:0;background:none;border-radius:50%;
   display:grid;place-items:center;color:var(--muted)}
@@ -219,7 +220,7 @@ textarea.in{min-height:90px;resize:vertical}
   <header class="top">
     <a class="volver" href="./" aria-label="Volver a las listas de Dilo">‹ Listas</a>
     <div class="ribbon" aria-hidden="true"></div>
-    <h1>Mi agenda</h1>
+    <h1>Mi agenda <span class="firma">APP by BARRI</span></h1>
     <p class="hoy" id="hoy"></p>
     <button class="menu-btn" id="btnMenu" aria-label="Más opciones">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
@@ -1446,6 +1447,6 @@ if ('serviceWorker' in navigator){
 }
 })();
 </script>
-<script type="module" src="js/nube.js?v=0.10"></script>
+<script type="module" src="js/nube.js?v=0.11"></script>
 </body>
 </html>
