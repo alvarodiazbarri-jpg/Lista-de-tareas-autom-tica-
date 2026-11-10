@@ -35,6 +35,8 @@ compartir la lista») y la pegue en el chat, y pasa lo nuevo a `PENDIENTES.md`.
     `perfiles`, `citas`, `familia`, `ajustes/general`.
   - Listas privadas («Solo para mí»): en `usuarios/{uid}` con las mismas `listas`, `items`, `detalles`.
     Solo las lee su dueño (lo protegen las reglas). En `js/app.js` son la fuente `'mia'`.
+  - Google Tasks: `DiloNube.pedirTokenTasks()` pide permiso (scope tasks) con un popup; el token dura 1 h
+    (`dilo:tasks`). `app.js` → `recogerDeGoogle()` trae «Mis tareas» y las marca como hechas.
   - Reglas en `firestore.rules` (copia; las publica Álvaro en la consola de Firebase).
   - Librería Firebase 10.12.2 copiada en `js/vendor/firebase` (no depende de gstatic).
 - `sw.js`: funciona sin conexión; **sube `CACHE` y los `?v=` de `index.html` en cada versión** para que

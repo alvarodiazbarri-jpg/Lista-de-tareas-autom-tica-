@@ -7,7 +7,7 @@
 import { initializeApp } from './vendor/firebase/firebase-app.js';
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
-  onAuthStateChanged, signOut,
+  onAuthStateChanged, signOut, reauthenticateWithPopup,
 } from './vendor/firebase/firebase-auth.js';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
@@ -33,6 +33,7 @@ const db = initializeFirestore(app, {
 });
 
 const HOGAR_KEY = 'dilo:hogar';
+const TASKS_KEY = 'dilo:tasks';
 const listeners = new Set();
 let user = null;
 let hogar = null;          // { id, nombre, miembros, creador }
@@ -210,6 +211,29 @@ const api = {
       throw e;
     }
   },
+
+  // Permiso para leer Google Tasks (lo que se dicta a «Hey Google, recuérdame…»).
+  // Google da un permiso que dura 1 hora: lo guardamos en el móvil y, cuando caduca, hay que
+  // volver a pedirlo con un toque (sale y se cierra una ventanita de Google).
+  tokenTasksGuardado() {
+    try {
+      const t = JSON.parse(localStorage.getItem(TASKS_KEY));
+      return t && t.correo === correo() && t.hasta > Date.now() ? t.token : null;
+    } catch (e) { return null; }
+  },
+  async pedirTokenTasks() {
+    if (!user) throw new Error('fuera');
+    const prov = new GoogleAuthProvider();
+    prov.addScope('https://www.googleapis.com/auth/tasks');
+    prov.setCustomParameters({ login_hint: user.email || '' });
+    const res = await reauthenticateWithPopup(user, prov);
+    const cred = GoogleAuthProvider.credentialFromResult(res);
+    const token = cred && cred.accessToken;
+    if (!token) throw new Error('sin-permiso');
+    try { localStorage.setItem(TASKS_KEY, JSON.stringify({ token, correo: correo(), hasta: Date.now() + 50 * 60000 })); } catch (e) {}
+    return token;
+  },
+  olvidarTokenTasks() { try { localStorage.removeItem(TASKS_KEY); } catch (e) {} },
 
   async salir() {
     if (hogarUnsub) { hogarUnsub(); hogarUnsub = null; }

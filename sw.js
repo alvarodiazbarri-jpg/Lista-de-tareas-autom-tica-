@@ -1,5 +1,5 @@
 // Service worker: permite abrir la app sin conexión.
-const CACHE = 'dilo-v18';
+const CACHE = 'dilo-v20';
 const ASSETS = [
   './',
   'index.html',
@@ -56,10 +56,39 @@ self.addEventListener('fetch', (e) => {
   );
 });
 
+// Botón fijo «Toca para apuntar» en las notificaciones (se ve también con el móvil bloqueado).
+// Las mismas opciones están en js/app.js.
+function mostrarFijo() {
+  return self.registration.showNotification('🎙️ Dilo · Toca para apuntar', {
+    body: 'Habla y se apunta en tus listas o en Mi agenda',
+    icon: 'icons/icon-192.png', badge: 'icons/badge-96.png', tag: 'dilo-fijo',
+    requireInteraction: true, silent: true, renotify: false,
+    actions: [{ action: 'voz', title: '🎙️ Apuntar' }],
+    data: { voz: true },
+  });
+}
+
 // Al tocar la notificación de "Apuntado": abrir la app en esa lista para revisarlo
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   const d = e.notification.data || {};
+  if (d.voz || e.action === 'voz') {
+    // Abrir Dilo escuchando y volver a dejar el botón fijo
+    const url = new URL('./?voz', self.registration.scope).href;
+    e.waitUntil(Promise.all([
+      mostrarFijo(),
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+        for (const w of wins) {
+          if (w.url.startsWith(self.registration.scope) && !w.url.includes('agenda.html')) {
+            w.postMessage({ voz: true });
+            return w.focus();
+          }
+        }
+        return self.clients.openWindow(url);
+      }),
+    ]));
+    return;
+  }
   // Notificaciones de la agenda abren la cita; las de las listas abren la lista
   const page = d.agenda ? 'agenda.html' + (d.citaId ? '?cita=' + encodeURIComponent(d.citaId) : '')
     : './' + (d.listId ? '?lista=' + encodeURIComponent(d.listId) : '');

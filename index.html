@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
-  <link rel="stylesheet" href="styles.css?v=0.15">
+  <link rel="stylesheet" href="styles.css?v=0.17">
 </head>
 <body>
   <!-- Cabecera de inicio -->
@@ -57,6 +57,12 @@
         <span class="ib-icon" aria-hidden="true">📥</span>
         <span class="ib-text"><b id="inboxTitle"></b><span>Toca para ordenarlas en sus listas</span></span>
         <span class="ib-go" aria-hidden="true">›</span>
+      </button>
+
+      <button id="gtasksBanner" class="cloud-card" type="button" hidden>
+        <span class="cloud-icon" aria-hidden="true">🎙️</span>
+        <span class="cloud-text"><b>Recoger lo dictado a «Hey Google»</b><span>Toca para traer a Dilo lo que apuntaste en Google Tasks</span></span>
+        <span class="cloud-go" aria-hidden="true">›</span>
       </button>
 
       <a id="agendaTile" class="agenda-tile" href="agenda.html">
@@ -139,6 +145,10 @@
     <h2 class="help-sub">Colores de las listas</h2>
     <div id="paletas" class="paletas"></div>
     <button id="notifyBtn" type="button" class="ghost-btn notify-btn">🔔 Activar notificaciones</button>
+    <button id="gtasksBtn" type="button" class="ghost-btn notify-btn">🎙️ Recoger lo que dicte a «Hey Google» (Google Tasks)</button>
+    <p class="cloud-note">Con el móvil bloqueado y sin tocarlo di «Hey Google, recuérdame comprar pilas»: se guarda en Google Tasks y al abrir Dilo pasa a tus listas (en Google Tasks queda como hecho).</p>
+    <button id="fijoBtn" type="button" class="ghost-btn notify-btn">📌 Poner un botón «Apuntar» fijo en las notificaciones</button>
+    <p class="cloud-note">Ese botón se ve también con el móvil bloqueado: lo tocas, desbloqueas y Dilo se abre escuchando. También puedes mandar texto a Dilo desde otra app con «Compartir» → Dilo.</p>
     <form method="dialog"><button class="primary-btn">Entendido</button></form>
     <p id="version" class="version"></p>
     <p class="firma-larga">Dilo · <b>APP by BARRI</b></p>
@@ -189,9 +199,9 @@
     </form>
   </dialog>
 
-  <script src="js/parser.js?v=0.15"></script>
-  <script src="js/citas.js?v=0.15"></script>
-  <script src="js/app.js?v=0.15"></script>
-  <script type="module" src="js/nube.js?v=0.15"></script>
+  <script src="js/parser.js?v=0.17"></script>
+  <script src="js/citas.js?v=0.17"></script>
+  <script src="js/app.js?v=0.17"></script>
+  <script type="module" src="js/nube.js?v=0.17"></script>
 </body>
 </html>
