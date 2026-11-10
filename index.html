@@ -10,8 +10,8 @@
   <title>Dilo · Listas por voz</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icons/icon.svg">
-  <link rel="stylesheet" href="styles.css?v=0.3.1">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css?v=0.4">
 </head>
 <body>
   <header class="topbar">
@@ -68,6 +68,8 @@
       <li><b>Cualquier otra cosa</b> se guarda en la <i>Bandeja de entrada</i> para organizarla luego.</li>
     </ul>
     <p>Si no hay conexión o el navegador no reconoce la voz, se graba el audio y lo encontrarás en la Bandeja de entrada.</p>
+    <p>Cada vez que apuntes algo te llegará una <b>notificación</b> confirmándolo. Tócala para abrir la lista y revisarlo.</p>
+    <button id="notifyBtn" type="button" class="ghost-btn notify-btn">🔔 Activar notificaciones</button>
     <form method="dialog"><button class="primary-btn">Entendido</button></form>
     <p id="version" class="version"></p>
   </dialog>
@@ -83,7 +85,7 @@
     </form>
   </dialog>
 
-  <script src="js/parser.js?v=0.3.1"></script>
-  <script src="js/app.js?v=0.3.1"></script>
+  <script src="js/parser.js?v=0.4"></script>
+  <script src="js/app.js?v=0.4"></script>
 </body>
 </html>

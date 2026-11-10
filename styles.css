@@ -175,3 +175,6 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 }
 
 .version { margin: 12px 0 0; font-size: .8rem; color: var(--muted); }
+
+.notify-btn { display: block; width: 100%; margin: 0 0 12px; text-align: left; border-style: solid; color: var(--text); }
+.notify-btn:disabled { opacity: .75; cursor: default; }
