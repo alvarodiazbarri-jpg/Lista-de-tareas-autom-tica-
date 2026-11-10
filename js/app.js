@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.7';
+  const VERSION = '0.8';
   const $ = (id) => document.getElementById(id);
 
   // ---------- Datos ----------
@@ -81,6 +81,9 @@
       for (const it of l.items) {
         const d = { listId: l.id, text: it.text, done: !!it.done, createdAt: it.createdAt || 0 };
         if (it.audioId) d.audioId = it.audioId;
+        if (it.by) d.by = it.by;
+        if (it.done && it.doneBy) d.doneBy = it.doneBy;
+        if (it.done && it.doneAt) d.doneAt = it.doneAt;
         items.push({ id: it.id, data: d });
       }
     }
@@ -119,6 +122,9 @@
       if (!l) continue;
       const it = { id: d.id, text: d.data.text || '', done: !!d.data.done, createdAt: d.data.createdAt || 0 };
       if (d.data.audioId) it.audioId = d.data.audioId;
+      if (d.data.by) it.by = d.data.by;
+      if (d.data.doneBy) it.doneBy = d.data.doneBy;
+      if (d.data.doneAt) it.doneAt = d.data.doneAt;
       l.items.push(it);
     }
     lists.forEach((l) => l.items.sort((a, b) => b.createdAt - a.createdAt));
@@ -146,7 +152,11 @@
         nube.lists.push(destino);
       }
       for (const it of local.items) {
-        if (!nube.lists.some((l) => l.items.some((x) => x.id === it.id))) { destino.items.push(it); nuevas++; }
+        if (!nube.lists.some((l) => l.items.some((x) => x.id === it.id))) {
+          // Lo que solo estaba en este móvil lo apuntó quien lo usa
+          if (!it.by && yoCorreo()) it.by = yoCorreo();
+          destino.items.push(it); nuevas++;
+        }
       }
       destino.items.sort((a, b) => b.createdAt - a.createdAt);
     }
@@ -206,8 +216,26 @@
     return list;
   }
 
+  // Correo de quien usa este móvil (si ha entrado con Google), para saber quién apuntó cada cosa
+  const yoCorreo = () => {
+    const N = window.DiloNube;
+    return N && N.usuario ? N.usuario.correo : '';
+  };
+
+  // Marcar o desmarcar como hecha, guardando quién y cuándo
+  function marcarHecha(item, hecha) {
+    item.done = hecha;
+    if (hecha) {
+      item.doneAt = Date.now();
+      if (yoCorreo()) item.doneBy = yoCorreo(); else delete item.doneBy;
+    } else {
+      delete item.doneAt; delete item.doneBy;
+    }
+  }
+
   function addItems(list, texts, extra = {}) {
     const ahora = Date.now();
+    if (yoCorreo()) extra = { by: yoCorreo(), ...extra };
     [...texts].reverse().forEach((text, i) => {
       const id = uid();
       recienApuntados.add(id);
@@ -624,16 +652,53 @@
   }
 
   // ---- Una lista ----
+  // «Ahora mismo», «Hace 5 min», «Hoy 9:15», «Ayer 18:30», «3 nov 18:30»
   function cuandoFue(ts) {
-    const min = Math.round((Date.now() - ts) / 60000);
+    if (!ts) return '';
+    const min = Math.floor((Date.now() - ts) / 60000);
     if (min < 1) return 'Ahora mismo';
     if (min < 60) return `Hace ${min} min`;
-    const h = Math.round(min / 60);
-    if (h < 24) return `Hace ${h} h`;
     const d = new Date(ts);
+    const hora = d.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' });
+    const hoy = new Date();
     const ayer = new Date(); ayer.setDate(ayer.getDate() - 1);
-    if (d.toDateString() === ayer.toDateString()) return 'Ayer';
-    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    if (d.toDateString() === hoy.toDateString()) return `Hoy ${hora}`;
+    if (d.toDateString() === ayer.toDateString()) return `Ayer ${hora}`;
+    const fecha = d.toLocaleDateString('es-ES', d.getFullYear() === hoy.getFullYear()
+      ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '');
+    return `${fecha} ${hora}`;
+  }
+
+  // Círculo con la foto o la inicial de una persona, en su color
+  function avatar(p) {
+    const a = el('span', { class: 'avatar', style: `--pc:${p.color}`, title: p.nombre, 'aria-hidden': 'true' });
+    if (p.foto) {
+      const img = el('img', { src: p.foto, alt: '', referrerpolicy: 'no-referrer' });
+      img.addEventListener('error', () => { img.remove(); a.textContent = p.inicial; });
+      a.append(img);
+    } else a.textContent = p.inicial;
+    return a;
+  }
+
+  // Línea de debajo: quién lo apuntó y cuándo (y quién lo marcó como hecho)
+  function quienYCuando(item) {
+    const N = window.DiloNube;
+    const conGente = !!(N && N.persona && N.compartida);
+    const quien = (correo) => (conGente && correo ? N.persona(correo) : null);
+    const meta = el('span', { class: 'meta' });
+    const trozo = (p, texto, cls) => {
+      const t = el('span', { class: 'meta-part' + (cls ? ' ' + cls : '') });
+      if (cls) t.append(el('span', { class: 'meta-tick', text: '✓', 'aria-label': 'Hecho por' }));
+      if (p) t.append(avatar(p), el('span', { class: 'meta-who', text: p.nombre }), ' · ');
+      t.append(texto);
+      meta.append(t);
+    };
+    trozo(quien(item.by), cuandoFue(item.createdAt));
+    if (item.done && (item.doneAt || item.doneBy)) {
+      const p = quien(item.doneBy);
+      trozo(p, cuandoFue(item.doneAt), 'meta-done');
+    }
+    return meta;
   }
 
   const ICON_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -643,9 +708,9 @@
     const li = el('li', { class: 'row' + (item.done ? ' done' : '') + (recienApuntados.has(item.id) ? ' nuevo' : '') });
     const chk = el('button', { class: 'check', type: 'button', 'aria-label': item.done ? 'Marcar como pendiente' : 'Marcar como hecho', 'aria-pressed': String(!!item.done) });
     chk.innerHTML = ICON_CHECK;
-    chk.addEventListener('click', () => { item.done = !item.done; save(); render(); });
+    chk.addEventListener('click', () => { marcarHecha(item, !item.done); save(); render(); });
     const txt = el('button', { class: 'row-text', type: 'button', 'aria-label': 'Editar: ' + item.text },
-      el('b', { text: item.text }), el('span', { text: cuandoFue(item.createdAt) }));
+      el('b', { text: item.text }), quienYCuando(item));
     txt.addEventListener('click', () => editarItem(item));
     if (item.audioId) {
       const audio = el('audio');
@@ -954,7 +1019,7 @@
       if (id !== hogarActual) { hogarActual = id; conectarListas(id ? N.db() : null); }
       renderCloud();
     });
-    N.onMiembros(renderCloud);
+    N.onMiembros(() => { renderCloud(); render(); });
     renderCloud();
   }
   if (window.DiloNube) conectarNube();
@@ -988,4 +1053,10 @@
   }
 
   render();
+
+  // Cada minuto se actualiza «Hace 5 min» en la lista abierta
+  setInterval(() => {
+    if (document.hidden || !currentListId || document.querySelector('dialog[open]')) return;
+    render();
+  }, 60000);
 })();

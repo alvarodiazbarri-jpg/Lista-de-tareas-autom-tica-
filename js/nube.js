@@ -50,8 +50,29 @@ function avisar() {
 function leerHogarGuardado() { try { return localStorage.getItem(HOGAR_KEY); } catch (e) { return null; } }
 function guardarHogar(id) { try { id ? localStorage.setItem(HOGAR_KEY, id) : localStorage.removeItem(HOGAR_KEY); } catch (e) {} }
 
+// Perfiles de la casa (nombre y foto de cada persona), en hogares/{id}/perfiles/{correo}.
+// Sirven para enseñar quién apuntó cada cosa.
+let perfiles = new Map();
+let perfilesUnsub = null;
+function seguirPerfiles(id) {
+  if (perfilesUnsub) { perfilesUnsub(); perfilesUnsub = null; }
+  perfiles = new Map();
+  if (!id) return;
+  const yo = correo();
+  if (yo && user) {
+    setDoc(doc(db, 'hogares', id, 'perfiles', yo), {
+      nombre: user.displayName || '', foto: user.photoURL || '', visto: serverTimestamp(),
+    }).catch(() => {});
+  }
+  perfilesUnsub = onSnapshot(collection(db, 'hogares', id, 'perfiles'), (s) => {
+    perfiles = new Map(s.docs.map((d) => [d.id, d.data()]));
+    avisarMiembros();
+  }, () => {});
+}
+
 function seguirHogar(id) {
   if (hogarUnsub) { hogarUnsub(); hogarUnsub = null; }
+  seguirPerfiles(id);
   if (!id) { hogar = null; return; }
   hogarUnsub = onSnapshot(doc(db, 'hogares', id), (s) => {
     if (!s.exists() || !(s.data().miembros || []).includes(correo())) {
@@ -128,6 +149,28 @@ function baseDeLaCasa() {
   };
 }
 
+// Colores de las personas de la casa (en el orden en que entraron, para que no se repitan)
+const COLORES_PERSONA = ['#1D6FD1', '#D1495B', '#2F8F6B', '#8A4FBF', '#E08A00', '#0E9AA7', '#A8643A', '#C2185B'];
+
+function persona(email) {
+  const e = (email || '').toLowerCase();
+  if (!e) return null;
+  const p = perfiles.get(e) || {};
+  const yo = e === correo();
+  let nombre = (p.nombre || (yo && user && user.displayName) || '').trim().split(/\s+/)[0];
+  if (!nombre) nombre = e.split('@')[0];
+  nombre = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+  const lista = (hogar && hogar.miembros) || [];
+  let i = lista.indexOf(e);
+  if (i < 0) { i = 0; for (const c of e) i = (i * 31 + c.charCodeAt(0)) >>> 0; }
+  return {
+    correo: e, nombre, yo,
+    inicial: nombre.charAt(0).toUpperCase(),
+    foto: p.foto || (yo && user && user.photoURL) || '',
+    color: COLORES_PERSONA[i % COLORES_PERSONA.length],
+  };
+}
+
 const api = {
   get estado() { return estado; },
   get usuario() { return user ? { correo: correo(), nombre: user.displayName || '', foto: user.photoURL || '' } : null; },
@@ -135,6 +178,9 @@ const api = {
   get hogares() { return hogares; },
   get error() { return ultimoError; },
   db: baseDeLaCasa,
+  persona,
+  // ¿Hay más de una persona en la casa? (si estás solo, no hace falta decir quién apuntó)
+  get compartida() { return !!(hogar && (hogar.miembros || []).length > 1); },
 
   onChange(fn) { listeners.add(fn); if (estado !== 'cargando') fn(api); return () => listeners.delete(fn); },
   onMiembros(fn) { miembrosListeners.add(fn); return () => miembrosListeners.delete(fn); },
@@ -157,6 +203,7 @@ const api = {
 
   async salir() {
     if (hogarUnsub) { hogarUnsub(); hogarUnsub = null; }
+    seguirPerfiles(null);
     hogar = null; guardarHogar(null);
     await signOut(auth);
   },
@@ -196,6 +243,7 @@ onAuthStateChanged(auth, (u) => {
   user = u;
   if (!u) {
     if (hogarUnsub) { hogarUnsub(); hogarUnsub = null; }
+    seguirPerfiles(null);
     hogar = null; hogares = []; estado = 'fuera';
     avisar();
     return;

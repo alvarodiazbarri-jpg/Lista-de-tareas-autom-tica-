@@ -1,33 +1,48 @@
 <title>Dilo</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
+/* Dilo · aspecto
+   Diseño: una libreta de bolsillo. Fondo gris azulado de papel (el mismo que «Mi agenda»),
+   tarjetas blancas, tinta azul marino y un único color vivo, el coral del micrófono,
+   para que lo primero que llame la atención sea «habla y apunta». */
 :root {
-  --bg: #f6f6fb;
-  --card: #ffffff;
-  --text: #1c1b29;
-  --muted: #6b6a7d;
-  --line: #e4e3ef;
-  --accent: #4f46e5;
-  --accent-soft: #eceafd;
-  --on-accent: #ffffff;
-  --danger: #dc2626;
-  --rec: #ef4444;
-  --toast-bg: #1c1b29;
-  --toast-fg: #ffffff;
-  --toast-link: #a5a1ff;
+  --bg: #EEF1F4;
+  --surface: #FFFFFF;
+  --surface-2: #E4EAF1;
+  --text: #18222E;
+  --muted: #5B6877;
+  --line: #D5DBE2;
+  --ink: #1D4F91;          /* azul de la agenda: enlaces, botones normales */
+  --on-ink: #FFFFFF;
+  --voice: #E4572E;        /* coral: micrófono y grabación */
+  --on-voice: #FFFFFF;
+  --ok: #1F9D55;
+  --danger: #C62828;
+  --shadow: 0 1px 2px rgb(24 34 46 / .06), 0 4px 14px rgb(24 34 46 / .06);
+  --toast-bg: #18222E;
+  --toast-fg: #FFFFFF;
+  --toast-link: #FFB59E;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Bricolage Grotesque", "Atkinson Hyperlegible", system-ui, sans-serif;
+  --radius: 18px;
+  --dock-h: 150px;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #121219; --card: #1c1c26; --text: #ececf4; --muted: #9a99ad; --line: #2c2b3a;
-    --accent: #8b85ff; --accent-soft: #26244a; --on-accent: #12112a; --danger: #f87171;
-    --toast-bg: #ececf4; --toast-fg: #1c1b29; --toast-link: #4f46e5;
+    --bg: #11161C; --surface: #1A222B; --surface-2: #232E3A; --text: #E7ECF1; --muted: #9AA7B5;
+    --line: #2B3744; --ink: #8DB8F2; --on-ink: #0E1620; --voice: #FF7A55; --on-voice: #1A0C06;
+    --ok: #4CC487; --danger: #FF7A7A;
+    --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 6px 18px rgb(0 0 0 / .25);
+    --toast-bg: #E7ECF1; --toast-fg: #18222E; --toast-link: #B3401F;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #121219; --card: #1c1c26; --text: #ececf4; --muted: #9a99ad; --line: #2c2b3a;
-  --accent: #8b85ff; --accent-soft: #26244a; --on-accent: #12112a; --danger: #f87171;
-  --toast-bg: #ececf4; --toast-fg: #1c1b29; --toast-link: #4f46e5;
+  --bg: #11161C; --surface: #1A222B; --surface-2: #232E3A; --text: #E7ECF1; --muted: #9AA7B5;
+  --line: #2B3744; --ink: #8DB8F2; --on-ink: #0E1620; --voice: #FF7A55; --on-voice: #1A0C06;
+  --ok: #4CC487; --danger: #FF7A7A;
+  --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 6px 18px rgb(0 0 0 / .25);
+  --toast-bg: #E7ECF1; --toast-fg: #18222E; --toast-link: #B3401F;
   color-scheme: dark;
 }
 
@@ -35,186 +50,476 @@
 [hidden] { display: none !important; }
 html, body { margin: 0; }
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.4;
   background: var(--bg);
   color: var(--text);
   min-height: 100dvh;
-  padding-bottom: 150px;
+  padding-bottom: calc(var(--dock-h) + env(safe-area-inset-bottom, 0px));
+  -webkit-tap-highlight-color: transparent;
 }
-button { font: inherit; color: inherit; cursor: pointer; }
-
-.topbar {
-  position: sticky; z-index: 5;
-  display: flex; align-items: center; gap: 8px;
-  top: env(safe-area-inset-top, 0px);
-  padding-block: 10px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
-}
-.topbar h1 { flex: 1; margin: 0; font-size: 1.3rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.icon-btn {
-  width: 38px; height: 38px; border-radius: 50%;
-  border: 1px solid var(--line); background: var(--card); font-size: 1.1rem;
-}
-
-main {
-  max-width: 640px; margin: 0 auto;
-  padding-block: 16px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-}
-
-.lists { display: grid; gap: 10px; }
-.list-card {
-  display: flex; align-items: center; gap: 12px;
-  width: 100%; text-align: left;
-  padding: 14px 16px; border-radius: 14px;
-  border: 1px solid var(--line); background: var(--card);
-}
-.list-card .emoji { font-size: 1.4rem; }
-.list-card .name { flex: 1; font-weight: 600; }
-.list-card .count {
-  min-width: 28px; padding: 2px 8px; border-radius: 99px; text-align: center;
-  background: var(--accent-soft); color: var(--accent); font-size: .85rem; font-weight: 600;
-}
-.list-card.inbox { border-color: var(--accent); }
-.list-card.inbox .count.has { background: var(--accent); color: var(--on-accent); }
-
-.ghost-btn {
-  margin-top: 12px; padding: 10px 14px; border-radius: 10px;
-  border: 1px dashed var(--line); background: transparent; color: var(--muted);
-}
-.ghost-btn.danger { color: var(--danger); }
-.primary-btn {
-  padding: 10px 18px; border-radius: 10px; border: 0;
-  background: var(--accent); color: var(--on-accent); font-weight: 600;
-}
-
-.items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px; border-radius: 12px;
-  background: var(--card); border: 1px solid var(--line);
-}
-.item input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
-.item .text { flex: 1; word-break: break-word; }
-.item.done .text { text-decoration: line-through; color: var(--muted); }
-.item .date { display: block; font-size: .75rem; color: var(--muted); }
-.item audio { width: 100%; max-width: 260px; height: 36px; }
-.item .actions { display: flex; gap: 4px; flex: none; }
-.item .actions button, .item select {
-  border: 1px solid var(--line); background: transparent; border-radius: 8px;
-  padding: 6px 8px; font-size: .85rem; color: var(--muted);
-}
-.item select { width: 44px; padding: 6px 4px; text-align: center; }
-.empty { text-align: center; color: var(--muted); margin: 40px 0; }
-.list-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-
-.dock {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 14px) max(16px, env(safe-area-inset-left, 0px));
-  background: linear-gradient(transparent, var(--bg) 30%);
-}
-.live {
-  max-width: 640px; margin: 0 auto 8px; min-height: 1.4em;
-  text-align: center; color: var(--muted); font-style: italic;
-}
-.text-form { max-width: 640px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
-.text-form input {
-  flex: 1; min-width: 0; padding: 14px 16px; border-radius: 99px;
-  border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 1rem;
-}
-.mic {
-  flex: none; width: 68px; height: 68px; border-radius: 50%; border: 0;
-  background: var(--accent); box-shadow: 0 6px 20px rgb(79 70 229 / .35);
-  display: grid; place-items: center;
-}
-.mic svg { width: 32px; height: 32px; fill: var(--on-accent); }
-.mic.recording { background: var(--rec); animation: pulse 1.2s infinite; }
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgb(239 68 68 / .55); }
-  100% { box-shadow: 0 0 0 22px rgb(239 68 68 / 0); }
-}
-
-.toast {
-  position: fixed; left: 16px; right: 16px; bottom: 120px; z-index: 20;
-  width: fit-content; margin: 0 auto;
-  display: flex; gap: 12px; align-items: center;
-  max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 12px;
-  background: var(--toast-bg); color: var(--toast-fg); box-shadow: 0 8px 30px rgb(0 0 0 / .25);
-}
-.toast-undo { border: 0; background: transparent; color: var(--toast-link); font-weight: 700; }
-
-dialog {
-  max-width: min(520px, calc(100% - 32px)); border: 0; border-radius: 16px;
-  background: var(--card); color: var(--text);
-}
-dialog::backdrop { background: rgb(0 0 0 / .4); }
-dialog li { margin-bottom: 6px; }
-
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 body::before {
   content: ""; position: fixed; inset: 0 0 auto; z-index: 10;
   height: env(safe-area-inset-top, 0px); background: var(--bg);
 }
+
+main, .home-head, .list-head {
+  max-width: 640px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---------- Botones comunes ---------- */
+.round-btn {
+  flex: none; width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  font-size: 1.05rem; font-weight: 700;
+}
+.round-btn svg { width: 22px; height: 22px; fill: currentColor; }
+.round-btn:active { background: var(--surface-2); }
+.primary-btn {
+  padding: 12px 18px; border-radius: 12px; border: 0;
+  background: var(--ink); color: var(--on-ink); font-weight: 700;
+}
+.primary-btn.danger-btn { background: var(--danger); color: #fff; }
+.ghost-btn {
+  padding: 12px 16px; border-radius: 12px;
+  border: 1px dashed var(--line); background: transparent; color: var(--muted);
+}
+
+/* ---------- Inicio: cabecera ---------- */
+.home-head {
+  display: flex; align-items: center; gap: 10px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 20px); padding-bottom: 6px;
+}
+.hh-text { flex: 1; min-width: 0; }
+.hh-date { margin: 0; color: var(--muted); font-size: .95rem; }
+.hh-hello {
+  margin: 2px 0 0; font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(1.9rem, 7vw, 2.4rem); line-height: 1.05; letter-spacing: -.02em;
+  text-wrap: balance;
+}
+.avatar-btn {
+  position: relative; flex: none; width: 44px; height: 44px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--surface); padding: 0;
+  display: grid; place-items: center; font-size: 1.2rem; overflow: visible;
+}
+.avatar-btn img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.avatar-btn.on::after {
+  content: ""; position: absolute; right: -1px; bottom: -1px; width: 13px; height: 13px;
+  border-radius: 50%; background: var(--ok); border: 2.5px solid var(--bg);
+}
+
+#homeView { display: grid; gap: 14px; padding-top: 10px; }
+
+/* Aviso para entrar en la nube */
+.cloud-card {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 14px 16px; border-radius: var(--radius);
+  border: 1.5px dashed var(--ink); background: var(--surface); color: var(--text);
+}
+.cloud-icon { font-size: 1.6rem; }
+.cloud-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.cloud-text span { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+.cloud-go { font-size: 1.6rem; color: var(--muted); }
+
+/* Bandeja de entrada con cosas por ordenar */
+.inbox-banner {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 14px 16px; border-radius: var(--radius); border: 0;
+  background: var(--text); color: var(--bg); box-shadow: var(--shadow);
+}
+.ib-icon { font-size: 1.6rem; }
+.ib-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.ib-text b { font-size: 1.05rem; }
+.ib-text span { opacity: .75; font-size: .9rem; }
+.ib-go { font-size: 1.6rem; opacity: .7; }
+
+/* Agenda: ficha con la próxima cita */
+.agenda-tile {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; border-radius: var(--radius);
+  background: var(--surface); box-shadow: var(--shadow);
+  text-decoration: none; color: inherit; border: 1px solid var(--line);
+}
+.at-cal {
+  flex: none; width: 58px; border-radius: 12px; overflow: hidden; text-align: center;
+  background: #fff; color: #18222E; box-shadow: 0 1px 2px rgb(0 0 0 / .2); border: 1px solid #D5DBE2;
+}
+.at-cal span {
+  display: block; background: #B3262E; color: #fff; font-size: .72rem; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; padding: 3px 0;
+}
+.at-cal b { display: block; font-size: 1.7rem; line-height: 1.25; font-family: var(--font-display); }
+.at-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.at-label { font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
+.at-text b { font-size: 1.05rem; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.at-text span:last-child { color: var(--muted); font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.at-count {
+  flex: none; min-width: 30px; height: 30px; padding: 0 9px; border-radius: 15px;
+  display: grid; place-items: center; font-weight: 700; font-size: .9rem;
+  background: var(--surface-2); color: var(--muted);
+}
+.at-count.has { background: #1D4F91; color: #fff; }
+
+.sec-title {
+  margin: 8px 2px -4px; font-size: .8rem; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+/* Listas en tarjetas */
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tiles-inner { display: contents; }
+.tile {
+  --hue: var(--ink);
+  position: relative; display: flex; flex-direction: column; gap: 8px; min-height: 132px;
+  padding: 14px; border-radius: var(--radius); text-align: left;
+  border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.tile::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 5px; background: var(--hue);
+}
+.tile:active { transform: scale(.98); }
+.tile-top { display: flex; align-items: center; gap: 8px; }
+.tile-emoji {
+  flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+  font-size: 1.35rem; background: color-mix(in srgb, var(--hue) 14%, var(--surface));
+}
+.tile-count {
+  margin-left: auto; min-width: 28px; height: 28px; padding: 0 8px; border-radius: 14px;
+  display: grid; place-items: center; font-weight: 700; font-size: .88rem;
+  background: var(--surface-2); color: var(--muted);
+}
+.tile-count.has { background: var(--hue); color: #fff; }
+.tile-name {
+  font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.tile-peek { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: .88rem; }
+.tile-peek li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-peek li::before { content: "○ "; opacity: .7; }
+.tile-new {
+  align-items: center; justify-content: center; gap: 6px;
+  border: 1.5px dashed var(--line); background: transparent; box-shadow: none; color: var(--muted);
+}
+.tile-new::before { display: none; }
+.tile-plus { font-size: 2rem; line-height: 1; font-weight: 300; }
+.tile-new .tile-name { font-size: 1rem; }
+
+/* ---------- Una lista ---------- */
+.list-head {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  display: flex; align-items: center; gap: 10px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 12px); padding-bottom: 12px;
+  background: var(--bg);
+}
+.lh-emoji {
+  flex: none; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center;
+  font-size: 1.5rem; background: color-mix(in srgb, var(--hue, var(--ink)) 16%, var(--surface));
+}
+.lh-text { flex: 1; min-width: 0; }
+.lh-text h1 {
+  margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 1.6rem;
+  line-height: 1.1; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.lh-text p { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
+
+#listView { padding-top: 4px; display: grid; gap: 14px; }
+.rows {
+  list-style: none; margin: 0; padding: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.rows:empty { display: none; }
+.row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 6px 10px 12px; min-height: 60px;
+  border-top: 1px solid var(--line);
+}
+.row:first-child { border-top: 0; }
+.row.nuevo { animation: llega 1.4s ease-out; }
+@keyframes llega { from { background: color-mix(in srgb, var(--voice) 22%, var(--surface)); } }
+.check {
+  flex: none; width: 30px; height: 30px; border-radius: 50%; padding: 0;
+  border: 2.5px solid var(--hue, var(--ink)); background: transparent; display: grid; place-items: center;
+}
+.check svg { width: 16px; height: 16px; opacity: 0; }
+.row.done .check { background: var(--ok); border-color: var(--ok); }
+.row.done .check svg { opacity: 1; }
+.row-text {
+  flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 4px 0;
+  display: grid; gap: 1px;
+}
+.row-text b { font-weight: 400; font-size: 1.05rem; overflow-wrap: anywhere; }
+.row-text .meta { font-size: .8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 2px; }
+.meta-part { display: inline-flex; align-items: center; gap: 5px; }
+.meta-who { font-weight: 600; color: var(--text); }
+.meta-tick { color: var(--ok); font-weight: 700; }
+.avatar {
+  flex: none; width: 18px; height: 18px; border-radius: 50%; overflow: hidden;
+  background: var(--pc, #6B7785); color: #fff; font-size: .68rem; font-weight: 700; line-height: 18px;
+  display: inline-grid; place-items: center;
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.row.done .row-text b { text-decoration: line-through; color: var(--muted); }
+.row audio { width: 100%; max-width: 260px; height: 36px; margin-top: 4px; }
+.row-more {
+  flex: none; width: 40px; height: 40px; border: 0; background: none; border-radius: 50%;
+  display: grid; place-items: center; color: var(--muted);
+}
+.row-more svg { width: 20px; height: 20px; fill: currentColor; }
+.row-more:active { background: var(--surface-2); }
+
+.empty {
+  display: grid; justify-items: center; gap: 4px; text-align: center;
+  padding: 40px 20px; color: var(--muted);
+}
+.empty-emoji { font-size: 3rem; margin-bottom: 6px; }
+.empty b { color: var(--text); font-size: 1.15rem; }
+
+.done-box { display: grid; gap: 10px; }
+.done-toggle {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  padding: 10px 4px; border: 0; background: none; color: var(--muted); font-weight: 700;
+}
+.done-toggle .chev { transition: transform .2s; font-size: 1.4rem; }
+.done-toggle[aria-expanded="true"] .chev { transform: rotate(90deg); }
+
+/* ---------- Barra inferior ---------- */
+.dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  padding: 18px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 14px) max(16px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(to bottom, transparent, var(--bg) 24px);
+  display: grid; gap: 10px;
+}
+.dock > * { width: 100%; max-width: 640px; margin: 0 auto; }
+.chips {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0;
+  mask-image: linear-gradient(to right, #000 88%, transparent);
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 14px; border-radius: 18px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: .92rem;
+}
+.chip[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.chip-label { flex: none; align-self: center; color: var(--muted); font-size: .85rem; padding-right: 2px; }
+.composer {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 6px 6px 18px; border-radius: 40px;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: 0 8px 28px rgb(24 34 46 / .14);
+}
+.composer input {
+  flex: 1; min-width: 0; height: 52px; border: 0; background: none; outline: none; font-size: 1.05rem;
+}
+.composer input::placeholder { color: var(--muted); }
+.composer:focus-within { border-color: var(--ink); }
+.send-btn {
+  flex: none; width: 48px; height: 48px; border-radius: 50%; border: 0;
+  background: var(--ink); color: var(--on-ink); display: grid; place-items: center;
+}
+.send-btn svg { width: 22px; height: 22px; }
+.mic {
+  position: relative; flex: none; width: 60px; height: 60px; border-radius: 50%; border: 0;
+  background: var(--voice); color: var(--on-voice); display: grid; place-items: center;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--voice) 45%, transparent);
+}
+.mic svg { width: 28px; height: 28px; fill: currentColor; }
+.mic-bars { display: none; gap: 3px; align-items: center; height: 26px; }
+.mic-bars i { width: 4px; height: 8px; border-radius: 2px; background: currentColor; animation: barra .9s ease-in-out infinite; }
+.mic-bars i:nth-child(2) { animation-delay: .15s; }
+.mic-bars i:nth-child(3) { animation-delay: .3s; }
+.mic-bars i:nth-child(4) { animation-delay: .45s; }
+@keyframes barra { 50% { height: 24px; } }
+.mic.recording svg { display: none; }
+.mic.recording .mic-bars { display: flex; }
+.mic.recording { animation: pulso 1.4s infinite; }
+@keyframes pulso {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--voice) 55%, transparent); }
+  100% { box-shadow: 0 0 0 20px transparent; }
+}
+.live {
+  padding: 14px 18px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line);
+  box-shadow: var(--shadow); font-size: 1.15rem; line-height: 1.3; min-height: 1.3em;
+}
+.live:empty { display: none; }
+
+/* ---------- Aviso inferior con deshacer ---------- */
+.toast {
+  position: fixed; left: 16px; right: 16px; z-index: 20;
+  bottom: calc(var(--dock-h) + env(safe-area-inset-bottom, 0px) + 4px);
+  width: fit-content; max-width: min(600px, calc(100% - 32px)); margin: 0 auto;
+  display: flex; gap: 14px; align-items: center; padding: 12px 16px; border-radius: 14px;
+  background: var(--toast-bg); color: var(--toast-fg); box-shadow: 0 10px 30px rgb(0 0 0 / .25);
+}
+.toast-undo { flex: none; border: 0; background: transparent; color: var(--toast-link); font-weight: 700; padding: 4px; }
+
+/* ---------- Ventanas ---------- */
+dialog {
+  max-width: min(520px, calc(100% - 32px)); border: 0; border-radius: 20px;
+  background: var(--surface); color: var(--text); padding: 20px;
+}
+dialog::backdrop { background: rgb(10 16 24 / .45); }
+dialog h2 { margin: 0 0 8px; font-family: var(--font-display); font-weight: 600; font-size: 1.3rem; }
+dialog li { margin-bottom: 6px; }
+/* Menús que salen desde abajo */
+.sheet-dlg {
+  margin: auto auto 0; width: 100%; max-width: 640px;
+  border-radius: 22px 22px 0 0; padding: 18px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 16px) max(16px, env(safe-area-inset-left, 0px));
+}
+.sheet-body { display: grid; gap: 6px; }
+.sheet-body h2 { overflow-wrap: anywhere; }
+.menu-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 0 14px;
+  border: 0; border-radius: 12px; background: var(--surface-2); text-align: left; font-size: 1.02rem;
+}
+.menu-item.danger { color: var(--danger); }
+.menu-item.cancel { justify-content: center; background: transparent; color: var(--muted); margin-top: 4px; }
+.menu-label { margin: 8px 2px 0; color: var(--muted); font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.move-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.move-grid .chip { height: 42px; }
+
 .ask-form { display: grid; gap: 14px; min-width: min(360px, 80vw); }
-.ask-form h2 { margin: 0; font-size: 1.1rem; text-wrap: balance; }
+.ask-form h2 { margin: 0; font-size: 1.15rem; text-wrap: balance; }
 .ask-form input {
-  padding: 12px 14px; border-radius: 10px; font-size: 1rem;
+  padding: 12px 14px; border-radius: 12px; font-size: 1rem;
   border: 1px solid var(--line); background: var(--bg); color: var(--text);
 }
 .ask-buttons { display: flex; justify-content: flex-end; gap: 8px; }
-.ask-buttons .ghost-btn { margin: 0; }
-.primary-btn.danger-btn { background: var(--danger); }
-button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .mic.recording { animation: none; } }
-
-.back-btn {
-  flex: none; display: inline-flex; align-items: center; gap: 4px;
-  padding: 8px 14px 8px 10px; border-radius: 99px; border: 0;
-  background: var(--accent); color: var(--on-accent);
-  font-size: 1rem; font-weight: 700;
-}
+.ask-buttons .ghost-btn { border-style: solid; }
 
 .version { margin: 12px 0 0; font-size: .8rem; color: var(--muted); }
-
 .notify-btn { display: block; width: 100%; margin: 0 0 12px; text-align: left; border-style: solid; color: var(--text); }
 .notify-btn:disabled { opacity: .75; cursor: default; }
+
+/* Nube y familia */
+.cloud-dlg { display: grid; gap: 12px; min-width: min(380px, 80vw); }
+.cloud-dlg h2 { margin: 0; }
+.cloud-dlg p { margin: 0; color: var(--muted); }
+.cloud-dlg .primary-btn, .cloud-dlg .ghost-btn { width: 100%; margin: 0; }
+.cloud-close { border-style: solid !important; }
+.cloud-who { display: flex; gap: 10px; align-items: center; }
+.cloud-who img { width: 40px; height: 40px; border-radius: 50%; }
+.cloud-members { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cloud-members li {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px;
+  background: var(--bg); border: 1px solid var(--line); overflow-wrap: anywhere;
+}
+.cloud-members li span { flex: 1; min-width: 0; }
+.cloud-members button { border: 0; background: transparent; color: var(--danger); font-weight: 700; }
+.cloud-row { display: flex; gap: 8px; }
+.cloud-row input {
+  flex: 1; min-width: 0; padding: 12px; border-radius: 12px; font-size: 1rem;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text);
+}
+.cloud-row .primary-btn { width: auto; }
+.cloud-note { font-size: .85rem; }
+.google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mic.recording, .mic-bars i, .row.nuevo { animation: none; }
+  .tile:active { transform: none; }
+}
+@media (min-width: 560px) {
+  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 </style>
 
-  <header class="topbar">
-    <button id="backBtn" class="back-btn" hidden aria-label="Volver a las listas">‹ Listas</button>
-    <h1 id="title">Dilo</h1>
-    <button id="helpBtn" class="icon-btn" aria-label="Ayuda">?</button>
+  <!-- Cabecera de inicio -->
+  <header class="home-head" id="homeHead">
+    <div class="hh-text">
+      <p class="hh-date" id="hoyFecha"></p>
+      <h1 class="hh-hello" id="saludo">Hola</h1>
+    </div>
+    <button id="cloudChip" class="avatar-btn" type="button" aria-label="Nube y familia">☁️</button>
+    <button id="helpBtn" class="round-btn" type="button" aria-label="Ayuda">?</button>
+  </header>
+
+  <!-- Cabecera de una lista -->
+  <header class="list-head" id="listHead" hidden>
+    <button id="backBtn" class="round-btn back" type="button" aria-label="Volver a las listas">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <span id="listEmoji" class="lh-emoji" aria-hidden="true"></span>
+    <div class="lh-text">
+      <h1 id="title">Dilo</h1>
+      <p id="listSub"></p>
+    </div>
+    <button id="listMenuBtn" class="round-btn" type="button" aria-label="Opciones de la lista">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+    </button>
   </header>
 
   <main id="main">
-    <!-- Vista: todas las listas -->
+    <!-- Vista: inicio -->
     <section id="homeView">
-      <div id="lists" class="lists"></div>
-      <button id="newListBtn" class="ghost-btn">+ Nueva lista</button>
+      <button id="cloudCard" class="cloud-card" type="button" hidden>
+        <span class="cloud-icon" aria-hidden="true">☁️</span>
+        <span class="cloud-text"><b id="cloudTitle"></b><span id="cloudSub"></span></span>
+        <span class="cloud-go" aria-hidden="true">›</span>
+      </button>
+
+      <button id="inboxBanner" class="inbox-banner" type="button" hidden>
+        <span class="ib-icon" aria-hidden="true">📥</span>
+        <span class="ib-text"><b id="inboxTitle"></b><span>Toca para ordenarlas en sus listas</span></span>
+        <span class="ib-go" aria-hidden="true">›</span>
+      </button>
+
+      <a id="agendaTile" class="agenda-tile" href="agenda.html">
+        <span class="at-cal" aria-hidden="true"><span id="atMes"></span><b id="atDia"></b></span>
+        <span class="at-text">
+          <span class="at-label">Mi agenda</span>
+          <b id="atTitulo">Sin citas próximas</b>
+          <span id="atDetalle"></span>
+        </span>
+        <span id="atCount" class="at-count"></span>
+      </a>
+
+      <h2 class="sec-title">Tus listas</h2>
+      <div class="tiles">
+        <div id="lists" class="tiles-inner"></div>
+        <button id="newListBtn" class="tile tile-new" type="button">
+          <span class="tile-plus" aria-hidden="true">+</span>
+          <span class="tile-name">Nueva lista</span>
+        </button>
+      </div>
     </section>
 
     <!-- Vista: una lista -->
     <section id="listView" hidden>
-      <ul id="items" class="items"></ul>
-      <p id="emptyMsg" class="empty" hidden>Lista vacía. Pulsa el micrófono y dilo.</p>
-      <div class="list-actions">
-        <button id="clearDoneBtn" class="ghost-btn">Borrar completadas</button>
-        <button id="renameListBtn" class="ghost-btn">Renombrar</button>
-        <button id="deleteListBtn" class="ghost-btn danger">Eliminar lista</button>
+      <ul id="items" class="rows"></ul>
+      <div id="emptyMsg" class="empty" hidden>
+        <span id="emptyEmoji" class="empty-emoji" aria-hidden="true"></span>
+        <b>Lista vacía</b>
+        <span id="emptyHint"></span>
+      </div>
+      <div id="doneBox" class="done-box" hidden>
+        <button id="doneToggle" class="done-toggle" type="button" aria-expanded="false">
+          <span id="doneSummary"></span><span class="chev" aria-hidden="true">›</span>
+        </button>
+        <ul id="doneItems" class="rows done-rows" hidden></ul>
       </div>
     </section>
   </main>
 
-  <!-- Barra inferior: voz + texto -->
+  <!-- Barra inferior: elegir lista, voz y texto -->
   <footer class="dock">
     <div id="live" class="live" aria-live="polite"></div>
-    <form id="textForm" class="text-form" autocomplete="off">
-      <input id="textInput" type="text" placeholder="O escríbelo aquí…" enterkeyhint="send">
+    <div id="chips" class="chips" role="group" aria-label="Apuntar en"></div>
+    <form id="textForm" class="composer" autocomplete="off">
+      <input id="textInput" type="text" placeholder="Escribe o pulsa el micro…" enterkeyhint="send" aria-label="Qué quieres apuntar">
+      <button id="sendBtn" class="send-btn" type="submit" aria-label="Apuntar" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
       <button id="micBtn" type="button" class="mic" aria-label="Hablar">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+        <span class="mic-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
       </button>
     </form>
   </footer>
@@ -232,6 +537,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
       <li><b>«Compra tomates»</b> — empieza con el nombre de la lista</li>
       <li><b>«Apunta en tareas limpiar el motor»</b> o <b>«Apunta limpiar el motor en tareas»</b></li>
       <li><b>«Crea una lista de regalos»</b>, <b>«Hazme una lista nueva de viajes»</b></li>
+      <li><b>«Crea una lista de viajes y apunta pasaporte y maleta»</b> o <b>«Crea una lista de viajes con pasaporte»</b> — crea la lista y apunta a la vez</li>
       <li>Si estás <b>dentro de una lista</b> y no nombras otra, se apunta en esa lista.</li>
       <li><b>«Añade una bici a la lista de regalos»</b> — si no existe, la crea</li>
       <li><b>Cualquier otra cosa</b> se guarda en la <i>Bandeja de entrada</i> para organizarla luego.</li>
@@ -241,6 +547,35 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     <button id="notifyBtn" type="button" class="ghost-btn notify-btn">🔔 Activar notificaciones</button>
     <form method="dialog"><button class="primary-btn">Entendido</button></form>
     <p id="version" class="version"></p>
+  </dialog>
+
+  <dialog id="listMenu" class="sheet-dlg">
+    <div class="sheet-body">
+      <h2 id="listMenuTitle">Lista</h2>
+      <button id="renameListBtn" class="menu-item" type="button">✏️ Cambiar el nombre</button>
+      <button id="clearDoneBtn" class="menu-item" type="button">🧹 Borrar las hechas</button>
+      <button id="deleteListBtn" class="menu-item danger" type="button">🗑️ Eliminar la lista</button>
+      <form method="dialog"><button class="menu-item cancel">Cerrar</button></form>
+    </div>
+  </dialog>
+
+  <dialog id="itemMenu" class="sheet-dlg">
+    <div class="sheet-body">
+      <h2 id="itemMenuTitle"></h2>
+      <button id="itemEdit" class="menu-item" type="button">✏️ Editar</button>
+      <p class="menu-label">Mover a</p>
+      <div id="itemMoveTo" class="move-grid"></div>
+      <button id="itemDelete" class="menu-item danger" type="button">🗑️ Borrar</button>
+      <form method="dialog"><button class="menu-item cancel">Cerrar</button></form>
+    </div>
+  </dialog>
+
+  <dialog id="cloudDialog">
+    <div class="cloud-dlg">
+      <h2>☁️ Nube y familia</h2>
+      <div id="cloudBody"></div>
+      <form method="dialog"><button class="ghost-btn cloud-close">Cerrar</button></form>
+    </div>
   </dialog>
 
   <dialog id="askDialog">
@@ -274,7 +609,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   // Quita artículos y la palabra "lista" del principio: "la lista de la compra" -> "compra"
   function cleanListName(str) {
     return str
-      .replace(/^(?:(?:la|el|las|los|mi|mis)\s+)?(?:lista\s+(?:de\s+(?:la\s+|el\s+|las\s+|los\s+)?|llamada\s+)?)?/i, '')
+      .replace(/^(?:(?:la|el|las|los|mi|mis|una|un)\s+)?(?:lista\s+(?:(?:nueva|nuevo)\s+)?(?:de\s+(?:la\s+|el\s+|las\s+|los\s+)?|llamada\s+|que se llame\s+)?)?/i, '')
       .replace(/^(?:la|el|las|los)\s+/i, '')
       .trim();
   }
@@ -330,6 +665,14 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   }
 
   function parse(rawText, lists) {
+    const colon = rawText.indexOf(':');
+    if (colon > 0) {
+      const head = parse(rawText.slice(0, colon), lists);
+      const tail = rawText.slice(colon + 1).trim();
+      if (head && head.type === 'create' && !head.items && tail) {
+        return { type: 'create', list: head.list, items: splitItems(tail.replace(/[.!?¡¿;:]/g, '')) };
+      }
+    }
     // orig y text tienen la misma longitud: text es orig sin tildes y en minúsculas
     let orig = rawText.replace(/[.!?¡¿;:]/g, '').replace(/\s+/g, ' ').trim();
     orig = collapseRepeat(orig);
@@ -352,7 +695,17 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
         const after = orig.slice(listIdx + 5).trim();
         const lead = normalize(after).match(NAME_LEAD_RE);
         const name = (lead ? after.slice(lead[0].length) : after).trim();
-        if (name) return { type: 'create', list: capitalize(name) };
+        if (name) {
+          // "crea una lista de viajes y apunta pasaporte" / "... con pasaporte y maleta"
+          const nn = normalize(name);
+          const sep = nn.match(new RegExp('\\s(?:y\\s+(?:' + ADD_VERBS.slice(3, -1) + ')|con|y dentro|y en ella(?:\\s+' + ADD_VERBS + ')?)\\s+'));
+          if (sep) {
+            const listName = name.slice(0, sep.index).trim();
+            const items = name.slice(sep.index + sep[0].length).trim();
+            if (listName && items) return { type: 'create', list: capitalize(listName), items: splitItems(items) };
+          }
+          return { type: 'create', list: capitalize(name) };
+        }
       }
     }
 
@@ -399,7 +752,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
       // Si dice explícitamente "lista" y no existe, la creamos
       for (let i = cuts.length - 1; i >= 0; i--) {
         const c = cuts[i];
-        if (/^(?:(?:la|mi)\s+)?lista\b/.test(body.slice(c.idx + c.len))) {
+        if (/^(?:(?:la|mi|una)\s+)?lista\b/.test(body.slice(c.idx + c.len))) {
           const name = cleanListName(bodyOrig.slice(c.idx + c.len));
           if (name) {
             return { type: 'add', list: capitalize(name), items: splitItems(bodyOrig.slice(0, c.idx)), created: true };
@@ -424,7 +777,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.4';
+  const VERSION = '0.8';
   const $ = (id) => document.getElementById(id);
 
   // ---------- Datos ----------
@@ -474,10 +827,153 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   let state = load();
   let undoSnapshot = null;
   let currentListId = null;
+  let targetListId = null;              // lista elegida en las etiquetas de abajo
+  const recienApuntados = new Set();    // para resaltar lo que se acaba de apuntar
 
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
     catch (e) { toast('⚠️ No se pudo guardar en este dispositivo'); }
+    pushCloud();
+  }
+
+  // ---------- Nube: listas compartidas con la casa ----------
+  // En la nube cada lista es un documento de «listas» y cada cosa apuntada uno de «items».
+  // Al guardar se suben solo los cambios; lo que llega de otro móvil reemplaza el estado.
+  let nubeDB = null;
+  let nubeUnsubs = [];
+  let nubeMigrada = false;
+  const nubeDocs = { listas: [], items: [] };
+  const nubeListo = { listas: false, items: false };     // ya llegó la respuesta del servidor
+  const subido = { listas: new Map(), items: new Map() };  // lo último que hay en la nube
+  const canon = (o) => JSON.stringify(Object.keys(o).sort().map((k) => [k, o[k]]));
+  const limpio = (o) => JSON.parse(JSON.stringify(o));
+
+  function docsLocales() {
+    const listas = state.lists.map((l, i) => ({ id: l.id, data: { name: l.name, emoji: l.emoji || emojiFor(l.name), orden: i } }));
+    const items = [];
+    for (const l of state.lists) {
+      for (const it of l.items) {
+        const d = { listId: l.id, text: it.text, done: !!it.done, createdAt: it.createdAt || 0 };
+        if (it.audioId) d.audioId = it.audioId;
+        if (it.by) d.by = it.by;
+        if (it.done && it.doneBy) d.doneBy = it.doneBy;
+        if (it.done && it.doneAt) d.doneAt = it.doneAt;
+        items.push({ id: it.id, data: d });
+      }
+    }
+    return { listas, items };
+  }
+
+  function fallaNube(e) {
+    if (e && e.code === 'permission-denied') toast('⚠️ No tienes permiso en esta casa. Revisa la invitación.');
+  }
+
+  function pushCloud() {
+    if (!nubeDB || !nubeMigrada) return;
+    const locales = docsLocales();
+    for (const col of ['listas', 'items']) {
+      const mapa = subido[col];
+      const ids = new Set();
+      for (const d of locales[col]) {
+        ids.add(d.id);
+        const c = canon(d.data);
+        if (mapa.get(d.id) !== c) { mapa.set(d.id, c); nubeDB.collection(col).doc(d.id).set(limpio(d.data)).catch(fallaNube); }
+      }
+      for (const id of [...mapa.keys()]) {
+        if (!ids.has(id)) { mapa.delete(id); nubeDB.collection(col).doc(id).delete().catch(fallaNube); }
+      }
+    }
+  }
+
+  // Construye las listas a partir de lo que hay en la nube
+  function estadoDeLaNube() {
+    const lists = nubeDocs.listas
+      .slice().sort((a, b) => (a.data.orden || 0) - (b.data.orden || 0))
+      .map((d) => ({ id: d.id, name: d.data.name || 'Lista', emoji: d.data.emoji || emojiFor(d.data.name || ''), items: [] }));
+    const porId = new Map(lists.map((l) => [l.id, l]));
+    for (const d of nubeDocs.items) {
+      const l = porId.get(d.data.listId);
+      if (!l) continue;
+      const it = { id: d.id, text: d.data.text || '', done: !!d.data.done, createdAt: d.data.createdAt || 0 };
+      if (d.data.audioId) it.audioId = d.data.audioId;
+      if (d.data.by) it.by = d.data.by;
+      if (d.data.doneBy) it.doneBy = d.data.doneBy;
+      if (d.data.doneAt) it.doneAt = d.data.doneAt;
+      l.items.push(it);
+    }
+    lists.forEach((l) => l.items.sort((a, b) => b.createdAt - a.createdAt));
+    return { lists };
+  }
+
+  function recordarSubido() {
+    for (const col of ['listas', 'items']) {
+      subido[col] = new Map(nubeDocs[col].map((d) => [d.id, canon(d.data)]));
+    }
+  }
+
+  const claveMigrada = () => 'dilo:nube:' + nubeDB.hogarId;
+
+  // Primera vez en este móvil: juntar lo que había aquí con lo que hay en la nube.
+  // Las listas con el mismo nombre se unen; no se borra nada.
+  function migrarAlaNube() {
+    const nube = estadoDeLaNube();
+    const norm = (n) => window.VoiceParser.normalize(n);
+    let nuevas = 0;
+    for (const local of state.lists) {
+      let destino = nube.lists.find((l) => l.id === local.id) || nube.lists.find((l) => norm(l.name) === norm(local.name));
+      if (!destino) {
+        destino = { id: local.id, name: local.name, emoji: local.emoji, items: [] };
+        nube.lists.push(destino);
+      }
+      for (const it of local.items) {
+        if (!nube.lists.some((l) => l.items.some((x) => x.id === it.id))) {
+          // Lo que solo estaba en este móvil lo apuntó quien lo usa
+          if (!it.by && yoCorreo()) it.by = yoCorreo();
+          destino.items.push(it); nuevas++;
+        }
+      }
+      destino.items.sort((a, b) => b.createdAt - a.createdAt);
+    }
+    if (!nube.lists.some((l) => l.name === INBOX_NAME)) nube.lists.unshift({ id: uid(), name: INBOX_NAME, emoji: '📥', items: [] });
+    state = nube;
+    recordarSubido();
+    nubeMigrada = true;
+    try { localStorage.setItem(claveMigrada(), '1'); } catch (e) {}
+    if (currentListId && !getList(currentListId)) currentListId = null;
+    save();      // sube lo que faltaba
+    render();
+    if (nuevas) toast(`☁️ ${nuevas} ${nuevas === 1 ? 'cosa apuntada pasada' : 'cosas apuntadas pasadas'} a la nube`);
+  }
+
+  function alCambiarLaNube() {
+    if (!nubeListo.listas || !nubeListo.items) return;
+    if (!nubeMigrada) { migrarAlaNube(); return; }
+    const nube = estadoDeLaNube();
+    if (!nube.lists.some((l) => l.name === INBOX_NAME)) nube.lists.unshift({ id: uid(), name: INBOX_NAME, emoji: '📥', items: [] });
+    state = nube;
+    recordarSubido();
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    pushCloud();   // por si hubo que crear la bandeja
+    if (currentListId && !getList(currentListId)) currentListId = null;
+    render();
+  }
+
+  function conectarListas(base) {
+    nubeUnsubs.forEach((u) => { try { u(); } catch (e) {} });
+    nubeUnsubs = [];
+    nubeDB = base;
+    nubeListo.listas = nubeListo.items = false;
+    nubeDocs.listas = []; nubeDocs.items = [];
+    if (!base) { nubeMigrada = false; return; }
+    nubeMigrada = (() => { try { return localStorage.getItem(claveMigrada()) === '1'; } catch (e) { return false; } })();
+    for (const col of ['listas', 'items']) {
+      nubeUnsubs.push(base.collection(col).onSnapshot((snap) => {
+        nubeDocs[col] = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+        // Para juntar por primera vez esperamos la respuesta del servidor, no solo la caché
+        if (!snap.metadata.fromCache || nubeMigrada) nubeListo[col] = true;
+        alCambiarLaNube();
+      }, fallaNube));
+    }
   }
 
   function snapshot() { undoSnapshot = JSON.stringify(state); }
@@ -494,10 +990,31 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     return list;
   }
 
-  function addItems(list, texts, extra = {}) {
-    for (const text of [...texts].reverse()) {
-      list.items.unshift({ id: uid(), text, done: false, createdAt: Date.now(), ...extra });
+  // Correo de quien usa este móvil (si ha entrado con Google), para saber quién apuntó cada cosa
+  const yoCorreo = () => {
+    const N = window.DiloNube;
+    return N && N.usuario ? N.usuario.correo : '';
+  };
+
+  // Marcar o desmarcar como hecha, guardando quién y cuándo
+  function marcarHecha(item, hecha) {
+    item.done = hecha;
+    if (hecha) {
+      item.doneAt = Date.now();
+      if (yoCorreo()) item.doneBy = yoCorreo(); else delete item.doneBy;
+    } else {
+      delete item.doneAt; delete item.doneBy;
     }
+  }
+
+  function addItems(list, texts, extra = {}) {
+    const ahora = Date.now();
+    if (yoCorreo()) extra = { by: yoCorreo(), ...extra };
+    [...texts].reverse().forEach((text, i) => {
+      const id = uid();
+      recienApuntados.add(id);
+      list.items.unshift({ id, text, done: false, createdAt: ahora + i, ...extra });
+    });
   }
 
   // ---------- Audio (IndexedDB) ----------
@@ -539,7 +1056,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     snapshot();
 
     // Si estás dentro de una lista y no nombras otra, va a la lista que tienes abierta
-    const open = currentListId && getList(currentListId);
+    const open = getList(currentListId || targetListId);
     if (result.type === 'inbox' && open && open.name !== INBOX_NAME) {
       const items = window.VoiceParser.splitItems(result.items[0]);
       addItems(open, items);
@@ -553,6 +1070,14 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     if (result.type === 'create') {
       const exists = findList(state.lists, result.list);
       const list = ensureList(result.list);
+      if (result.items && result.items.length) {
+        addItems(list, result.items);
+        save(); render();
+        const what = result.items.length === 1 ? `«${result.items[0]}»` : `${result.items.length} elementos`;
+        toast(`${list.emoji} ${exists ? '' : 'Lista nueva · '}${what} → ${list.name}`, true);
+        notifySaved(list, result.items);
+        return;
+      }
       save(); render();
       toast(exists ? `La lista «${list.name}» ya existía` : `Lista «${list.name}» creada`, true);
       return;
@@ -581,6 +1106,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     micBtn.classList.toggle('recording', on);
     micBtn.setAttribute('aria-label', on ? 'Parar' : 'Hablar');
     live.textContent = msg;
+    $('chips').hidden = on || !!(currentListId && getList(currentListId));
   }
 
   function startRecognition() {
@@ -705,6 +1231,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     if (!text) return;
     handleInput(text);
     input.value = '';
+    renderComposer();
   });
 
   // ---------- Notificación de confirmación ----------
@@ -798,131 +1325,299 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   });
 
   // ---------- Render ----------
+  // Color de cada lista (siempre el mismo para el mismo nombre, en todos los móviles)
+  const COLORES = ['#1D6FD1', '#2F8F6B', '#E08A00', '#8A4FBF', '#D1495B', '#0E9AA7', '#A8643A', '#558B2F'];
+  function colorDe(list) {
+    if (list.name === INBOX_NAME) return '#44515F';
+    const n = window.VoiceParser.normalize(list.name);
+    let h = 0;
+    for (const c of n) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return COLORES[h % COLORES.length];
+  }
+
   function render() {
     const list = currentListId && getList(currentListId);
     $('homeView').hidden = !!list;
+    $('homeHead').hidden = !!list;
     $('listView').hidden = !list;
-    $('backBtn').hidden = !list;
-    $('title').textContent = list ? `${list.emoji} ${list.name}` : 'Dilo';
+    $('listHead').hidden = !list;
     if (list) renderList(list); else renderHome();
+    renderChips();
+    renderComposer();
+  }
+
+  // ---- Inicio ----
+  function saludo() {
+    const h = new Date().getHours();
+    const base = h < 6 ? 'Buenas noches' : h < 14 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
+    const N = window.DiloNube;
+    const nombre = N && N.usuario && N.usuario.nombre ? N.usuario.nombre.split(' ')[0] : '';
+    return nombre ? `${base}, ${nombre}` : base;
+  }
+
+  function leerAgenda() {
+    try {
+      const citas = JSON.parse(localStorage.getItem('agenda:c2')) || JSON.parse(localStorage.getItem('agenda:v1')) || [];
+      const fam = JSON.parse(localStorage.getItem('agenda:m2')) || JSON.parse(localStorage.getItem('agenda:miembros')) || [];
+      return { citas, fam };
+    } catch (e) { return { citas: [], fam: [] }; }
+  }
+  const hoyISO = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  // Citas pendientes de «Mi agenda» (se guarda aparte, en agenda.html)
+  function agendaPending() {
+    const { citas } = leerAgenda();
+    const hoy = hoyISO();
+    return citas.filter((c) => c.fecha >= hoy && (c.estado || (c.hecha ? 'hecha' : 'pendiente')) === 'pendiente')
+      .sort((a, b) => (a.fecha + (a.hora || '')).localeCompare(b.fecha + (b.hora || '')));
+  }
+
+  function renderAgendaTile() {
+    const prox = agendaPending();
+    const { fam } = leerAgenda();
+    const c = prox[0];
+    const count = $('atCount');
+    count.textContent = prox.length;
+    count.classList.toggle('has', prox.length > 0);
+    if (!c) {
+      $('atMes').textContent = new Date().toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
+      $('atDia').textContent = new Date().getDate();
+      $('atTitulo').textContent = 'Sin citas próximas';
+      $('atDetalle').textContent = 'Toca para apuntar una';
+      return;
+    }
+    const [y, m, d] = c.fecha.split('-').map(Number);
+    const f = new Date(y, m - 1, d);
+    $('atMes').textContent = f.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
+    $('atDia').textContent = d;
+    $('atTitulo').textContent = c.titulo || 'Cita';
+    const quien = c.de === 'familia' ? 'Toda la familia' : (fam.find((p) => p.id === c.de) || {}).n;
+    const cuando = c.fecha === hoyISO() ? 'Hoy' : f.toLocaleDateString('es-ES', { weekday: 'long' });
+    $('atDetalle').textContent = [cuando.charAt(0).toUpperCase() + cuando.slice(1), c.hora, quien].filter(Boolean).join(' · ');
   }
 
   function renderHome() {
+    const hoy = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    $('hoyFecha').textContent = hoy.charAt(0).toUpperCase() + hoy.slice(1);
+    $('saludo').textContent = saludo();
+
+    const bandeja = inbox();
+    const porOrdenar = bandeja ? bandeja.items.filter((i) => !i.done).length : 0;
+    $('inboxBanner').hidden = !porOrdenar;
+    $('inboxTitle').textContent = porOrdenar === 1 ? '1 cosa por ordenar' : `${porOrdenar} cosas por ordenar`;
+
+    renderAgendaTile();
+
     const wrap = $('lists');
-    wrap.innerHTML = '';
+    wrap.replaceChildren();
     for (const l of state.lists) {
-      const pending = l.items.filter((i) => !i.done).length;
-      const b = document.createElement('button');
-      b.className = 'list-card' + (l.name === INBOX_NAME ? ' inbox' : '');
-      b.innerHTML = `<span class="emoji"></span><span class="name"></span><span class="count"></span>`;
-      b.querySelector('.emoji').textContent = l.emoji;
-      b.querySelector('.name').textContent = l.name;
-      const c = b.querySelector('.count');
-      c.textContent = pending;
-      if (pending) c.classList.add('has');
-      b.addEventListener('click', () => { currentListId = l.id; render(); window.scrollTo(0, 0); });
-      wrap.appendChild(b);
+      const pend = l.items.filter((i) => !i.done);
+      const tile = el('button', { class: 'tile', type: 'button', style: `--hue:${colorDe(l)}`, 'aria-label': `${l.name}, ${pend.length} pendientes` },
+        el('span', { class: 'tile-top' },
+          el('span', { class: 'tile-emoji', text: l.emoji }),
+          el('span', { class: 'tile-count' + (pend.length ? ' has' : ''), text: String(pend.length) })),
+        el('span', { class: 'tile-name', text: l.name }),
+        pend.length ? el('ul', { class: 'tile-peek' }, ...pend.slice(0, 2).map((i) => el('li', { text: i.text }))) : null);
+      tile.addEventListener('click', () => { openList(l.id); });
+      wrap.appendChild(tile);
     }
   }
 
-  function fmtDate(ts) {
-    return new Date(ts).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  // ---- Una lista ----
+  // «Ahora mismo», «Hace 5 min», «Hoy 9:15», «Ayer 18:30», «3 nov 18:30»
+  function cuandoFue(ts) {
+    if (!ts) return '';
+    const min = Math.floor((Date.now() - ts) / 60000);
+    if (min < 1) return 'Ahora mismo';
+    if (min < 60) return `Hace ${min} min`;
+    const d = new Date(ts);
+    const hora = d.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' });
+    const hoy = new Date();
+    const ayer = new Date(); ayer.setDate(ayer.getDate() - 1);
+    if (d.toDateString() === hoy.toDateString()) return `Hoy ${hora}`;
+    if (d.toDateString() === ayer.toDateString()) return `Ayer ${hora}`;
+    const fecha = d.toLocaleDateString('es-ES', d.getFullYear() === hoy.getFullYear()
+      ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '');
+    return `${fecha} ${hora}`;
   }
 
+  // Círculo con la foto o la inicial de una persona, en su color
+  function avatar(p) {
+    const a = el('span', { class: 'avatar', style: `--pc:${p.color}`, title: p.nombre, 'aria-hidden': 'true' });
+    if (p.foto) {
+      const img = el('img', { src: p.foto, alt: '', referrerpolicy: 'no-referrer' });
+      img.addEventListener('error', () => { img.remove(); a.textContent = p.inicial; });
+      a.append(img);
+    } else a.textContent = p.inicial;
+    return a;
+  }
+
+  // Línea de debajo: quién lo apuntó y cuándo (y quién lo marcó como hecho)
+  function quienYCuando(item) {
+    const N = window.DiloNube;
+    const conGente = !!(N && N.persona && N.compartida);
+    const quien = (correo) => (conGente && correo ? N.persona(correo) : null);
+    const meta = el('span', { class: 'meta' });
+    const trozo = (p, texto, cls) => {
+      const t = el('span', { class: 'meta-part' + (cls ? ' ' + cls : '') });
+      if (cls) t.append(el('span', { class: 'meta-tick', text: '✓', 'aria-label': 'Hecho por' }));
+      if (p) t.append(avatar(p), el('span', { class: 'meta-who', text: p.nombre }), ' · ');
+      t.append(texto);
+      meta.append(t);
+    };
+    trozo(quien(item.by), cuandoFue(item.createdAt));
+    if (item.done && (item.doneAt || item.doneBy)) {
+      const p = quien(item.doneBy);
+      trozo(p, cuandoFue(item.doneAt), 'meta-done');
+    }
+    return meta;
+  }
+
+  const ICON_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const ICON_MORE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+
+  function fila(list, item) {
+    const li = el('li', { class: 'row' + (item.done ? ' done' : '') + (recienApuntados.has(item.id) ? ' nuevo' : '') });
+    const chk = el('button', { class: 'check', type: 'button', 'aria-label': item.done ? 'Marcar como pendiente' : 'Marcar como hecho', 'aria-pressed': String(!!item.done) });
+    chk.innerHTML = ICON_CHECK;
+    chk.addEventListener('click', () => { marcarHecha(item, !item.done); save(); render(); });
+    const txt = el('button', { class: 'row-text', type: 'button', 'aria-label': 'Editar: ' + item.text },
+      el('b', { text: item.text }), quienYCuando(item));
+    txt.addEventListener('click', () => editarItem(item));
+    if (item.audioId) {
+      const audio = el('audio');
+      audio.controls = true;
+      getAudio(item.audioId).then((blob) => { if (blob) audio.src = URL.createObjectURL(blob); }).catch(() => {});
+      txt.append(audio);
+    }
+    const more = el('button', { class: 'row-more', type: 'button', 'aria-label': 'Más opciones' });
+    more.innerHTML = ICON_MORE;
+    more.addEventListener('click', () => abrirMenuItem(list, item));
+    li.append(chk, txt, more);
+    return li;
+  }
+
+  let verHechas = false;
   function renderList(list) {
-    const ul = $('items');
-    ul.innerHTML = '';
     const isInbox = list.name === INBOX_NAME;
-    $('emptyMsg').hidden = list.items.length > 0;
+    const pend = list.items.filter((i) => !i.done);
+    const hechas = list.items.filter((i) => i.done);
+    document.documentElement.style.setProperty('--hue', colorDe(list));
+    $('listEmoji').textContent = list.emoji;
+    $('title').textContent = list.name;
+    $('listSub').textContent = list.items.length
+      ? `${pend.length} ${pend.length === 1 ? 'pendiente' : 'pendientes'}${hechas.length ? ` · ${hechas.length} ${hechas.length === 1 ? 'hecha' : 'hechas'}` : ''}`
+      : 'Vacía';
+
+    $('items').replaceChildren(...pend.map((i) => fila(list, i)));
+    $('emptyMsg').hidden = pend.length > 0;
+    $('emptyEmoji').textContent = hechas.length ? '🎉' : list.emoji;
+    $('emptyMsg').querySelector('b').textContent = hechas.length ? '¡Todo hecho!' : 'Lista vacía';
+    $('emptyHint').textContent = isInbox
+      ? 'Aquí llega lo que dices sin nombrar una lista.'
+      : `Pulsa el micro y di, por ejemplo, «${list.name === 'Compra' ? 'leche y pan' : 'llamar al taller'}».`;
+
+    $('doneBox').hidden = !hechas.length;
+    $('doneSummary').textContent = `Hechas (${hechas.length})`;
+    $('doneToggle').setAttribute('aria-expanded', String(verHechas));
+    $('doneItems').hidden = !verHechas;
+    $('doneItems').replaceChildren(...hechas.map((i) => fila(list, i)));
+
     $('deleteListBtn').hidden = isInbox;
     $('renameListBtn').hidden = isInbox;
+    $('clearDoneBtn').hidden = !hechas.length;
+    setTimeout(() => recienApuntados.clear(), 1500);
+  }
+  $('doneToggle').addEventListener('click', () => { verHechas = !verHechas; render(); });
 
-    const sorted = [...list.items].sort((a, b) => a.done - b.done);
-    for (const item of sorted) {
-      const li = document.createElement('li');
-      li.className = 'item' + (item.done ? ' done' : '');
+  async function editarItem(item) {
+    const t = await ask('Editar', item.text);
+    if (t && t.trim()) { snapshot(); item.text = t.trim(); save(); render(); }
+  }
 
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = item.done;
-      cb.setAttribute('aria-label', 'Completado');
-      cb.addEventListener('change', () => { item.done = cb.checked; save(); render(); });
-
-      const text = document.createElement('div');
-      text.className = 'text';
-      text.textContent = item.text;
-      const date = document.createElement('span');
-      date.className = 'date';
-      date.textContent = fmtDate(item.createdAt);
-      text.appendChild(date);
-      if (item.audioId) {
-        const audio = document.createElement('audio');
-        audio.controls = true;
-        getAudio(item.audioId).then((blob) => { if (blob) audio.src = URL.createObjectURL(blob); });
-        text.appendChild(audio);
-      }
-
-      const actions = document.createElement('div');
-      actions.className = 'actions';
-
-      // Mover a otra lista (clave para organizar la bandeja de entrada)
-      const sel = document.createElement('select');
-      sel.setAttribute('aria-label', 'Mover a lista');
-      sel.innerHTML = '<option value="">📂</option>';
-      sel.title = isInbox ? 'Organizar en una lista' : 'Mover a otra lista';
-      for (const l of state.lists) {
-        if (l.id === list.id) continue;
-        const o = document.createElement('option');
-        o.value = l.id;
-        o.textContent = `${l.emoji} ${l.name}`;
-        sel.appendChild(o);
-      }
-      const n = document.createElement('option');
-      n.value = '__new';
-      n.textContent = '+ Nueva lista…';
-      sel.appendChild(n);
-      sel.addEventListener('change', async () => {
-        let target = null;
-        if (sel.value === '__new') {
-          const name = await ask('Nombre de la nueva lista');
-          if (name && name.trim()) target = ensureList(name.trim());
-        } else if (sel.value) {
-          target = getList(sel.value);
-        }
-        if (!target) { sel.value = ''; return; }
-        snapshot();
-        list.items = list.items.filter((i) => i.id !== item.id);
-        target.items.unshift(item);
-        save(); render();
-        toast(`Movido a ${target.emoji} ${target.name}`, true);
-      });
-
-      const edit = document.createElement('button');
-      edit.textContent = '✏️';
-      edit.setAttribute('aria-label', 'Editar');
-      edit.addEventListener('click', async () => {
-        const t = await ask('Editar', item.text);
-        if (t && t.trim()) { item.text = t.trim(); save(); render(); }
-      });
-
-      const del = document.createElement('button');
-      del.textContent = '🗑️';
-      del.setAttribute('aria-label', 'Borrar');
-      del.addEventListener('click', () => {
-        snapshot();
-        list.items = list.items.filter((i) => i.id !== item.id);
-        save(); render();
-        toast('Elemento borrado', true);
-      });
-
-      actions.append(sel, edit, del);
-      li.append(cb, text, actions);
-      ul.appendChild(li);
+  // Menú de una cosa apuntada: editar, mover a otra lista, borrar
+  let menuItem = null;
+  function abrirMenuItem(list, item) {
+    menuItem = { list, item };
+    $('itemMenuTitle').textContent = item.text;
+    const grid = $('itemMoveTo');
+    grid.replaceChildren();
+    for (const l of state.lists) {
+      if (l.id === list.id) continue;
+      const b = el('button', { class: 'chip', type: 'button' }, `${l.emoji} ${l.name}`);
+      b.addEventListener('click', () => moverItem(l));
+      grid.append(b);
     }
+    const nueva = el('button', { class: 'chip', type: 'button' }, '+ Lista nueva');
+    nueva.addEventListener('click', async () => {
+      $('itemMenu').close();
+      const name = await ask('Nombre de la nueva lista');
+      if (name && name.trim()) moverItem(ensureList(name.trim()));
+    });
+    grid.append(nueva);
+    $('itemMenu').showModal();
+  }
+  function moverItem(target) {
+    const { list, item } = menuItem;
+    if ($('itemMenu').open) $('itemMenu').close();
+    snapshot();
+    list.items = list.items.filter((i) => i.id !== item.id);
+    target.items.unshift(item);
+    save(); render();
+    toast(`Movido a ${target.emoji} ${target.name}`, true);
+  }
+  $('itemEdit').addEventListener('click', () => { $('itemMenu').close(); editarItem(menuItem.item); });
+  $('itemDelete').addEventListener('click', () => {
+    const { list, item } = menuItem;
+    $('itemMenu').close();
+    snapshot();
+    list.items = list.items.filter((i) => i.id !== item.id);
+    save(); render();
+    toast('Borrado', true);
+  });
+
+  // ---- Barra inferior: etiquetas para elegir lista y caja de texto ----
+  function renderChips() {
+    const box = $('chips');
+    const enLista = !!(currentListId && getList(currentListId));
+    box.hidden = enLista || listening;
+    if (box.hidden) return;
+    if (targetListId && !getList(targetListId)) targetListId = null;
+    box.replaceChildren(el('span', { class: 'chip-label', text: 'Apuntar en' }));
+    for (const l of state.lists) {
+      const on = l.id === targetListId;
+      const b = el('button', { class: 'chip', type: 'button', 'aria-pressed': String(on) }, `${l.emoji} ${l.name}`);
+      b.addEventListener('click', () => {
+        targetListId = on ? null : l.id;
+        render();
+        if (!on) $('textInput').focus({ preventScroll: true });
+      });
+      box.append(b);
+    }
+  }
+
+  function renderComposer() {
+    const l = getList(currentListId || targetListId);
+    $('textInput').placeholder = l && l.name !== INBOX_NAME ? `Añadir a ${l.name}…` : 'Escribe o pulsa el micro…';
+    const conTexto = !!$('textInput').value.trim();
+    $('sendBtn').hidden = !conTexto;
+  }
+  $('textInput').addEventListener('input', renderComposer);
+
+  $('listMenuBtn').addEventListener('click', () => {
+    const l = getList(currentListId);
+    if (!l) return;
+    $('listMenuTitle').textContent = `${l.emoji} ${l.name}`;
+    $('listMenu').showModal();
+  });
+  for (const id of ['renameListBtn', 'clearDoneBtn', 'deleteListBtn']) {
+    $(id).addEventListener('click', () => { if ($('listMenu').open) $('listMenu').close(); });
   }
 
   // ---------- Acciones de lista ----------
-  $('backBtn').addEventListener('click', () => { currentListId = null; render(); });
+  $('backBtn').addEventListener('click', () => { currentListId = null; render(); window.scrollTo(0, 0); });
   $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
   $('version').textContent = 'Versión ' + VERSION;
   $('notifyBtn').addEventListener('click', askNotifyPermission);
@@ -934,8 +1629,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     snapshot();
     const list = ensureList(name.trim());
     save();
-    currentListId = list.id;
-    render();
+    openList(list.id);
   });
 
   $('clearDoneBtn').addEventListener('click', () => {
@@ -951,6 +1645,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
     const list = getList(currentListId);
     const name = await ask('Nuevo nombre', list.name);
     if (!name || !name.trim()) return;
+    snapshot();
     list.name = name.trim();
     list.emoji = emojiFor(list.name);
     save(); render();
@@ -975,6 +1670,134 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
       req.onsuccess = () => req.result.forEach((k) => { if (!used.has(k)) deleteAudio(k); });
     } catch (e) { /* sin IndexedDB */ }
   })();
+
+  // ---------- Nube: tarjeta y ventana «Nube y familia» ----------
+  const el = (tag, props = {}, ...kids) => {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === 'text') e.textContent = v;
+      else if (k === 'class') e.className = v;
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+      else e.setAttribute(k, v);
+    }
+    e.append(...kids.filter(Boolean));
+    return e;
+  };
+
+  function renderCloud() {
+    const N = window.DiloNube;
+    const card = $('cloudCard');
+    const chip = $('cloudChip');
+    if (!N) { card.hidden = true; return; }
+    const st = N.estado;
+    // Botón redondo de arriba: tu foto (con punto verde si estás en la nube) o una nube
+    const u = N.usuario;
+    chip.replaceChildren();
+    if (u && u.foto) chip.append(el('img', { src: u.foto, alt: '' }));
+    else chip.textContent = '☁️';
+    chip.classList.toggle('on', st === 'dentro');
+    chip.setAttribute('aria-label', st === 'dentro' ? 'Nube y familia: conectado' : 'Nube y familia');
+    // Aviso grande solo mientras no estás dentro
+    card.hidden = st === 'dentro' || st === 'cargando';
+    if (st === 'fuera') { $('cloudTitle').textContent = 'Guarda tus listas en la nube'; $('cloudSub').textContent = 'Entra con Google y compártelas con tu familia'; }
+    else if (st === 'sin-casa') { $('cloudTitle').textContent = 'Falta crear tu casa'; $('cloudSub').textContent = u ? u.correo : ''; }
+    if (!$('homeView').hidden) $('saludo').textContent = saludo();
+    if ($('cloudDialog').open) renderCloudDialog();
+  }
+
+  async function conEspera(btn, fn) {
+    const t = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Un momento…';
+    try { await fn(); } catch (e) {
+      const c = e && e.code;
+      toast(c === 'auth/unauthorized-domain' ? '⚠️ Falta autorizar la dirección de Dilo en Firebase (Dominios autorizados)'
+        : c === 'auth/network-request-failed' || c === 'unavailable' ? '⚠️ Sin conexión. Inténtalo con internet.'
+        : e && e.message === 'correo' ? 'Escribe un correo válido, por ejemplo nombre@gmail.com'
+        : '⚠️ No se pudo hacer. ' + (c || ''));
+    } finally { btn.disabled = false; btn.textContent = t; }
+  }
+
+  function renderCloudDialog() {
+    const N = window.DiloNube;
+    const body = $('cloudBody');
+    body.replaceChildren();
+    if (!N || N.estado === 'cargando') { body.append(el('p', { text: 'Conectando…' })); return; }
+
+    if (N.estado === 'fuera') {
+      body.append(
+        el('p', { text: 'Con la nube, tus listas y tu agenda se guardan en internet: no se pierden si cambias de móvil, y puedes compartirlas con tu familia.' }),
+        el('button', { class: 'primary-btn google-btn', type: 'button', onclick: (e) => conEspera(e.currentTarget, () => N.entrar()) }, 'Entrar con Google'),
+        el('p', { class: 'cloud-note', text: 'Solo podrán ver tus datos las personas que tú invites.' }),
+      );
+      return;
+    }
+
+    const u = N.usuario;
+    body.append(el('div', { class: 'cloud-who' },
+      u.foto ? el('img', { src: u.foto, alt: '' }) : null,
+      el('div', {}, el('b', { text: u.nombre || u.correo }), el('br'), el('span', { class: 'cloud-note', text: u.correo }))));
+
+    if (N.estado === 'sin-casa') {
+      const nombre = el('input', { type: 'text', id: 'casaNombre', placeholder: 'Ej.: Casa de Álvaro y Bea' });
+      nombre.value = 'Casa de ' + ((u.nombre || '').split(' ')[0] || 'la familia');
+      body.append(
+        el('p', { text: 'Todavía no estás en ninguna casa.' }),
+        el('p', { class: 'cloud-note', text: 'Si alguien te va a invitar a la suya, pídele que lo haga y pulsa «Buscar de nuevo». Si eres el primero, crea la tuya.' }),
+        el('div', { class: 'cloud-row' }, nombre),
+        el('button', { class: 'primary-btn', type: 'button', onclick: (e) => conEspera(e.currentTarget, () => N.crearHogar(nombre.value)) }, 'Crear mi casa'),
+        el('button', { class: 'ghost-btn', type: 'button', onclick: (e) => conEspera(e.currentTarget, () => N.buscarDeNuevo()) }, 'Buscar de nuevo (ya me han invitado)'),
+        el('button', { class: 'ghost-btn', type: 'button', onclick: (e) => conEspera(e.currentTarget, () => N.salir()) }, 'Salir de la cuenta'),
+      );
+      return;
+    }
+
+    const h = N.hogar;
+    const lista = el('ul', { class: 'cloud-members' });
+    for (const m of h.miembros || []) {
+      const yo = m === u.correo;
+      lista.append(el('li', {}, el('span', { text: m + (yo ? ' (tú)' : '') }),
+        yo ? null : el('button', { type: 'button', onclick: async (e) => {
+          if (!(await ask(`¿Quitar a ${m} de la casa? Dejará de ver vuestras listas y citas.`, null, 'Quitar'))) return;
+          conEspera(e.currentTarget, () => N.quitar(m));
+        } }, 'Quitar')));
+    }
+    const email = el('input', { type: 'email', id: 'invitarCorreo', placeholder: 'correo@gmail.com', autocomplete: 'off' });
+    body.append(
+      el('p', { text: `Casa: ${h.nombre || 'Mi casa'}` }),
+      el('b', { text: 'Quién puede verla' }),
+      lista,
+      el('b', { text: 'Invitar a alguien' }),
+      el('p', { class: 'cloud-note', text: 'Escribe su correo de Google (Gmail). Luego esa persona abre Dilo en su móvil, pulsa «Entrar con Google» y verá todo.' }),
+      el('div', { class: 'cloud-row' }, email,
+        el('button', { class: 'primary-btn', type: 'button', onclick: (e) => conEspera(e.currentTarget, async () => {
+          await N.invitar(email.value);
+          toast(`✅ Invitación hecha: ${email.value.trim().toLowerCase()}`);
+          email.value = '';
+        }) }, 'Invitar')),
+      el('p', { class: 'cloud-note', text: 'Todo lo de Dilo (listas y agenda) se comparte con las personas de la casa. Las notas de voz grabadas se quedan en el móvil donde se grabaron.' }),
+      el('button', { class: 'ghost-btn', type: 'button', onclick: (e) => conEspera(e.currentTarget, () => N.salir()) }, 'Salir de la cuenta'),
+    );
+  }
+
+  const abrirNube = () => { renderCloudDialog(); $('cloudDialog').showModal(); };
+  $('cloudCard').addEventListener('click', abrirNube);
+  $('cloudChip').addEventListener('click', abrirNube);
+  $('inboxBanner').addEventListener('click', () => { const b = inbox(); if (b) openList(b.id); });
+
+  function conectarNube() {
+    const N = window.DiloNube;
+    if (!N) return;
+    let hogarActual = null;
+    N.onChange(() => {
+      const id = N.estado === 'dentro' && N.hogar ? N.hogar.id : null;
+      if (id !== hogarActual) { hogarActual = id; conectarListas(id ? N.db() : null); }
+      renderCloud();
+    });
+    N.onMiembros(() => { renderCloud(); render(); });
+    renderCloud();
+  }
+  if (window.DiloNube) conectarNube();
+  else window.addEventListener('dilonube', conectarNube, { once: true });
 
   // Atajo: abrir la app con ?voz para empezar a hablar directamente
   // Al tocar una notificación: abrir la lista donde se apuntó
@@ -1004,5 +1827,12 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   }
 
   render();
+
+  // Cada minuto se actualiza «Hace 5 min» en la lista abierta
+  setInterval(() => {
+    if (document.hidden || !currentListId || document.querySelector('dialog[open]')) return;
+    render();
+  }, 60000);
 })();
 </script>
+  <script type="module" src="js/nube.js?v=0.8"></script>

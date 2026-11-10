@@ -9,7 +9,7 @@ Lista de mejoras para la app. Marca con [x] lo que esté hecho.
    - Cada persona entra en Dilo con su cuenta de Google; solo la familia ve sus datos.
 2. [ ] **Compartir con mi mujer** (y con la familia) *Hecho en la versión 0.6 (☁️ → Invitar), falta probarlo.*: que ella instale Dilo en su móvil, entre con su cuenta de Google y veamos las mismas citas y listas. Lo que apunte uno aparece en el móvil del otro en segundos. Necesita el punto 1.
    - Elegir qué se comparte: la agenda seguro; ¿también la compra? ¿Las tareas e ideas de cada uno quedan privadas?
-3. [ ] **Quién y cuándo**: en cada cosa apuntada (listas y agenda) que se vea **quién la apuntó** (Álvaro, Bea…, con su foto o inicial y su color) y **cuándo** («Hace 5 min», «Ayer 18:30»). También quién la marcó como hecha. Guardar el correo de quien apunta en la nube.
+3. [x] **Quién y cuándo** *Hecho en la versión 0.8, falta probarlo con dos móviles.*: en cada cosa apuntada (listas y agenda) que se vea **quién la apuntó** (Álvaro, Bea…, con su foto o inicial y su color) y **cuándo** («Hace 5 min», «Ayer 18:30»). También quién la marcó como hecha. Guardar el correo de quien apunta en la nube.
 4. [ ] **Apuntar citas con la voz**: «cita con el dentista el martes a las 10 para Julia» → se guarda en Mi agenda con fecha, hora, lugar y persona, y llega la notificación de confirmación.
 5. [ ] **Recetas dentro de Dilo**, igual que se ha hecho con la agenda (copiar «Recetas de Karlos Bernal» y «Comidas de la semana»).
 6. [ ] **Leer citas desde fotos** (lo que hacía «Importar» en la Mi agenda de Claude): buscar otra forma, porque fuera de claude.ai no se puede usar a Claude así.
@@ -25,6 +25,7 @@ Lista de mejoras para la app. Marca con [x] lo que esté hecho.
 - [ ] Recuperar las fotos de las citas que se quedaron en la Mi agenda antigua (guardar copia de seguridad desde allí con las fotos y cargarla en Dilo).
 
 ## Hecho
+- [x] Quién apuntó cada cosa y cuándo, y quién la marcó como hecha, en listas y agenda (versión 0.8). Solo se ve el nombre cuando hay más de una persona en la casa; lo apuntado antes no tiene autor.
 - [x] Nuevo diseño de inicio y listas: tarjetas de colores, etiquetas «Apuntar en», micrófono grande (versión 0.7).
 - [x] Crear una lista y apuntar en ella con una sola frase: «Crea una lista de viajes y apunta pasaporte» (versión 0.5.1).
 - [x] «Mi agenda» dentro de Dilo, igual que la original, con las 18 citas y la familia copiadas (versión 0.5). Las fotos de las citas se quedaron en la app antigua.
