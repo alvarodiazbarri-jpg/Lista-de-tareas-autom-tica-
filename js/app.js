@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.6';
+  const VERSION = '0.7';
   const $ = (id) => document.getElementById(id);
 
   // ---------- Datos ----------
@@ -53,6 +53,8 @@
   let state = load();
   let undoSnapshot = null;
   let currentListId = null;
+  let targetListId = null;              // lista elegida en las etiquetas de abajo
+  const recienApuntados = new Set();    // para resaltar lo que se acaba de apuntar
 
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
@@ -207,7 +209,9 @@
   function addItems(list, texts, extra = {}) {
     const ahora = Date.now();
     [...texts].reverse().forEach((text, i) => {
-      list.items.unshift({ id: uid(), text, done: false, createdAt: ahora + i, ...extra });
+      const id = uid();
+      recienApuntados.add(id);
+      list.items.unshift({ id, text, done: false, createdAt: ahora + i, ...extra });
     });
   }
 
@@ -250,7 +254,7 @@
     snapshot();
 
     // Si estás dentro de una lista y no nombras otra, va a la lista que tienes abierta
-    const open = currentListId && getList(currentListId);
+    const open = getList(currentListId || targetListId);
     if (result.type === 'inbox' && open && open.name !== INBOX_NAME) {
       const items = window.VoiceParser.splitItems(result.items[0]);
       addItems(open, items);
@@ -300,6 +304,7 @@
     micBtn.classList.toggle('recording', on);
     micBtn.setAttribute('aria-label', on ? 'Parar' : 'Hablar');
     live.textContent = msg;
+    $('chips').hidden = on || !!(currentListId && getList(currentListId));
   }
 
   function startRecognition() {
@@ -424,6 +429,7 @@
     if (!text) return;
     handleInput(text);
     input.value = '';
+    renderComposer();
   });
 
   // ---------- Notificación de confirmación ----------
@@ -517,150 +523,262 @@
   });
 
   // ---------- Render ----------
+  // Color de cada lista (siempre el mismo para el mismo nombre, en todos los móviles)
+  const COLORES = ['#1D6FD1', '#2F8F6B', '#E08A00', '#8A4FBF', '#D1495B', '#0E9AA7', '#A8643A', '#558B2F'];
+  function colorDe(list) {
+    if (list.name === INBOX_NAME) return '#44515F';
+    const n = window.VoiceParser.normalize(list.name);
+    let h = 0;
+    for (const c of n) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return COLORES[h % COLORES.length];
+  }
+
   function render() {
     const list = currentListId && getList(currentListId);
     $('homeView').hidden = !!list;
+    $('homeHead').hidden = !!list;
     $('listView').hidden = !list;
-    $('backBtn').hidden = !list;
-    $('title').textContent = list ? `${list.emoji} ${list.name}` : 'Dilo';
+    $('listHead').hidden = !list;
     if (list) renderList(list); else renderHome();
+    renderChips();
+    renderComposer();
   }
 
+  // ---- Inicio ----
+  function saludo() {
+    const h = new Date().getHours();
+    const base = h < 6 ? 'Buenas noches' : h < 14 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
+    const N = window.DiloNube;
+    const nombre = N && N.usuario && N.usuario.nombre ? N.usuario.nombre.split(' ')[0] : '';
+    return nombre ? `${base}, ${nombre}` : base;
+  }
+
+  function leerAgenda() {
+    try {
+      const citas = JSON.parse(localStorage.getItem('agenda:c2')) || JSON.parse(localStorage.getItem('agenda:v1')) || [];
+      const fam = JSON.parse(localStorage.getItem('agenda:m2')) || JSON.parse(localStorage.getItem('agenda:miembros')) || [];
+      return { citas, fam };
+    } catch (e) { return { citas: [], fam: [] }; }
+  }
+  const hoyISO = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
   // Citas pendientes de «Mi agenda» (se guarda aparte, en agenda.html)
   function agendaPending() {
-    try {
-      // La agenda guarda en 'agenda:c2' cuando está en la nube y en 'agenda:v1' cuando no
-      const citas = JSON.parse(localStorage.getItem('agenda:c2')) || JSON.parse(localStorage.getItem('agenda:v1')) || [];
-      const d = new Date();
-      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      return citas.filter((c) => c.fecha >= today && (c.estado || (c.hecha ? 'hecha' : 'pendiente')) === 'pendiente').length;
-    } catch (e) { return 0; }
+    const { citas } = leerAgenda();
+    const hoy = hoyISO();
+    return citas.filter((c) => c.fecha >= hoy && (c.estado || (c.hecha ? 'hecha' : 'pendiente')) === 'pendiente')
+      .sort((a, b) => (a.fecha + (a.hora || '')).localeCompare(b.fecha + (b.hora || '')));
+  }
+
+  function renderAgendaTile() {
+    const prox = agendaPending();
+    const { fam } = leerAgenda();
+    const c = prox[0];
+    const count = $('atCount');
+    count.textContent = prox.length;
+    count.classList.toggle('has', prox.length > 0);
+    if (!c) {
+      $('atMes').textContent = new Date().toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
+      $('atDia').textContent = new Date().getDate();
+      $('atTitulo').textContent = 'Sin citas próximas';
+      $('atDetalle').textContent = 'Toca para apuntar una';
+      return;
+    }
+    const [y, m, d] = c.fecha.split('-').map(Number);
+    const f = new Date(y, m - 1, d);
+    $('atMes').textContent = f.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
+    $('atDia').textContent = d;
+    $('atTitulo').textContent = c.titulo || 'Cita';
+    const quien = c.de === 'familia' ? 'Toda la familia' : (fam.find((p) => p.id === c.de) || {}).n;
+    const cuando = c.fecha === hoyISO() ? 'Hoy' : f.toLocaleDateString('es-ES', { weekday: 'long' });
+    $('atDetalle').textContent = [cuando.charAt(0).toUpperCase() + cuando.slice(1), c.hora, quien].filter(Boolean).join(' · ');
   }
 
   function renderHome() {
+    const hoy = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    $('hoyFecha').textContent = hoy.charAt(0).toUpperCase() + hoy.slice(1);
+    $('saludo').textContent = saludo();
+
+    const bandeja = inbox();
+    const porOrdenar = bandeja ? bandeja.items.filter((i) => !i.done).length : 0;
+    $('inboxBanner').hidden = !porOrdenar;
+    $('inboxTitle').textContent = porOrdenar === 1 ? '1 cosa por ordenar' : `${porOrdenar} cosas por ordenar`;
+
+    renderAgendaTile();
+
     const wrap = $('lists');
-    wrap.innerHTML = '';
-    const ag = document.createElement('a');
-    ag.className = 'list-card agenda';
-    ag.href = 'agenda.html';
-    ag.innerHTML = '<span class="emoji">📅</span><span class="name">Mi agenda</span><span class="count"></span>';
-    const n = agendaPending();
-    ag.querySelector('.count').textContent = n;
-    if (n) ag.querySelector('.count').classList.add('has');
-    wrap.appendChild(ag);
+    wrap.replaceChildren();
     for (const l of state.lists) {
-      const pending = l.items.filter((i) => !i.done).length;
-      const b = document.createElement('button');
-      b.className = 'list-card' + (l.name === INBOX_NAME ? ' inbox' : '');
-      b.innerHTML = `<span class="emoji"></span><span class="name"></span><span class="count"></span>`;
-      b.querySelector('.emoji').textContent = l.emoji;
-      b.querySelector('.name').textContent = l.name;
-      const c = b.querySelector('.count');
-      c.textContent = pending;
-      if (pending) c.classList.add('has');
-      b.addEventListener('click', () => { currentListId = l.id; render(); window.scrollTo(0, 0); });
-      wrap.appendChild(b);
+      const pend = l.items.filter((i) => !i.done);
+      const tile = el('button', { class: 'tile', type: 'button', style: `--hue:${colorDe(l)}`, 'aria-label': `${l.name}, ${pend.length} pendientes` },
+        el('span', { class: 'tile-top' },
+          el('span', { class: 'tile-emoji', text: l.emoji }),
+          el('span', { class: 'tile-count' + (pend.length ? ' has' : ''), text: String(pend.length) })),
+        el('span', { class: 'tile-name', text: l.name }),
+        pend.length ? el('ul', { class: 'tile-peek' }, ...pend.slice(0, 2).map((i) => el('li', { text: i.text }))) : null);
+      tile.addEventListener('click', () => { openList(l.id); });
+      wrap.appendChild(tile);
     }
   }
 
-  function fmtDate(ts) {
-    return new Date(ts).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  // ---- Una lista ----
+  function cuandoFue(ts) {
+    const min = Math.round((Date.now() - ts) / 60000);
+    if (min < 1) return 'Ahora mismo';
+    if (min < 60) return `Hace ${min} min`;
+    const h = Math.round(min / 60);
+    if (h < 24) return `Hace ${h} h`;
+    const d = new Date(ts);
+    const ayer = new Date(); ayer.setDate(ayer.getDate() - 1);
+    if (d.toDateString() === ayer.toDateString()) return 'Ayer';
+    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
   }
 
+  const ICON_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const ICON_MORE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+
+  function fila(list, item) {
+    const li = el('li', { class: 'row' + (item.done ? ' done' : '') + (recienApuntados.has(item.id) ? ' nuevo' : '') });
+    const chk = el('button', { class: 'check', type: 'button', 'aria-label': item.done ? 'Marcar como pendiente' : 'Marcar como hecho', 'aria-pressed': String(!!item.done) });
+    chk.innerHTML = ICON_CHECK;
+    chk.addEventListener('click', () => { item.done = !item.done; save(); render(); });
+    const txt = el('button', { class: 'row-text', type: 'button', 'aria-label': 'Editar: ' + item.text },
+      el('b', { text: item.text }), el('span', { text: cuandoFue(item.createdAt) }));
+    txt.addEventListener('click', () => editarItem(item));
+    if (item.audioId) {
+      const audio = el('audio');
+      audio.controls = true;
+      getAudio(item.audioId).then((blob) => { if (blob) audio.src = URL.createObjectURL(blob); }).catch(() => {});
+      txt.append(audio);
+    }
+    const more = el('button', { class: 'row-more', type: 'button', 'aria-label': 'Más opciones' });
+    more.innerHTML = ICON_MORE;
+    more.addEventListener('click', () => abrirMenuItem(list, item));
+    li.append(chk, txt, more);
+    return li;
+  }
+
+  let verHechas = false;
   function renderList(list) {
-    const ul = $('items');
-    ul.innerHTML = '';
     const isInbox = list.name === INBOX_NAME;
-    $('emptyMsg').hidden = list.items.length > 0;
+    const pend = list.items.filter((i) => !i.done);
+    const hechas = list.items.filter((i) => i.done);
+    document.documentElement.style.setProperty('--hue', colorDe(list));
+    $('listEmoji').textContent = list.emoji;
+    $('title').textContent = list.name;
+    $('listSub').textContent = list.items.length
+      ? `${pend.length} ${pend.length === 1 ? 'pendiente' : 'pendientes'}${hechas.length ? ` · ${hechas.length} ${hechas.length === 1 ? 'hecha' : 'hechas'}` : ''}`
+      : 'Vacía';
+
+    $('items').replaceChildren(...pend.map((i) => fila(list, i)));
+    $('emptyMsg').hidden = pend.length > 0;
+    $('emptyEmoji').textContent = hechas.length ? '🎉' : list.emoji;
+    $('emptyMsg').querySelector('b').textContent = hechas.length ? '¡Todo hecho!' : 'Lista vacía';
+    $('emptyHint').textContent = isInbox
+      ? 'Aquí llega lo que dices sin nombrar una lista.'
+      : `Pulsa el micro y di, por ejemplo, «${list.name === 'Compra' ? 'leche y pan' : 'llamar al taller'}».`;
+
+    $('doneBox').hidden = !hechas.length;
+    $('doneSummary').textContent = `Hechas (${hechas.length})`;
+    $('doneToggle').setAttribute('aria-expanded', String(verHechas));
+    $('doneItems').hidden = !verHechas;
+    $('doneItems').replaceChildren(...hechas.map((i) => fila(list, i)));
+
     $('deleteListBtn').hidden = isInbox;
     $('renameListBtn').hidden = isInbox;
+    $('clearDoneBtn').hidden = !hechas.length;
+    setTimeout(() => recienApuntados.clear(), 1500);
+  }
+  $('doneToggle').addEventListener('click', () => { verHechas = !verHechas; render(); });
 
-    const sorted = [...list.items].sort((a, b) => a.done - b.done);
-    for (const item of sorted) {
-      const li = document.createElement('li');
-      li.className = 'item' + (item.done ? ' done' : '');
+  async function editarItem(item) {
+    const t = await ask('Editar', item.text);
+    if (t && t.trim()) { snapshot(); item.text = t.trim(); save(); render(); }
+  }
 
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = item.done;
-      cb.setAttribute('aria-label', 'Completado');
-      cb.addEventListener('change', () => { item.done = cb.checked; save(); render(); });
-
-      const text = document.createElement('div');
-      text.className = 'text';
-      text.textContent = item.text;
-      const date = document.createElement('span');
-      date.className = 'date';
-      date.textContent = fmtDate(item.createdAt);
-      text.appendChild(date);
-      if (item.audioId) {
-        const audio = document.createElement('audio');
-        audio.controls = true;
-        getAudio(item.audioId).then((blob) => { if (blob) audio.src = URL.createObjectURL(blob); });
-        text.appendChild(audio);
-      }
-
-      const actions = document.createElement('div');
-      actions.className = 'actions';
-
-      // Mover a otra lista (clave para organizar la bandeja de entrada)
-      const sel = document.createElement('select');
-      sel.setAttribute('aria-label', 'Mover a lista');
-      sel.innerHTML = '<option value="">📂</option>';
-      sel.title = isInbox ? 'Organizar en una lista' : 'Mover a otra lista';
-      for (const l of state.lists) {
-        if (l.id === list.id) continue;
-        const o = document.createElement('option');
-        o.value = l.id;
-        o.textContent = `${l.emoji} ${l.name}`;
-        sel.appendChild(o);
-      }
-      const n = document.createElement('option');
-      n.value = '__new';
-      n.textContent = '+ Nueva lista…';
-      sel.appendChild(n);
-      sel.addEventListener('change', async () => {
-        let target = null;
-        if (sel.value === '__new') {
-          const name = await ask('Nombre de la nueva lista');
-          if (name && name.trim()) target = ensureList(name.trim());
-        } else if (sel.value) {
-          target = getList(sel.value);
-        }
-        if (!target) { sel.value = ''; return; }
-        snapshot();
-        list.items = list.items.filter((i) => i.id !== item.id);
-        target.items.unshift(item);
-        save(); render();
-        toast(`Movido a ${target.emoji} ${target.name}`, true);
-      });
-
-      const edit = document.createElement('button');
-      edit.textContent = '✏️';
-      edit.setAttribute('aria-label', 'Editar');
-      edit.addEventListener('click', async () => {
-        const t = await ask('Editar', item.text);
-        if (t && t.trim()) { item.text = t.trim(); save(); render(); }
-      });
-
-      const del = document.createElement('button');
-      del.textContent = '🗑️';
-      del.setAttribute('aria-label', 'Borrar');
-      del.addEventListener('click', () => {
-        snapshot();
-        list.items = list.items.filter((i) => i.id !== item.id);
-        save(); render();
-        toast('Elemento borrado', true);
-      });
-
-      actions.append(sel, edit, del);
-      li.append(cb, text, actions);
-      ul.appendChild(li);
+  // Menú de una cosa apuntada: editar, mover a otra lista, borrar
+  let menuItem = null;
+  function abrirMenuItem(list, item) {
+    menuItem = { list, item };
+    $('itemMenuTitle').textContent = item.text;
+    const grid = $('itemMoveTo');
+    grid.replaceChildren();
+    for (const l of state.lists) {
+      if (l.id === list.id) continue;
+      const b = el('button', { class: 'chip', type: 'button' }, `${l.emoji} ${l.name}`);
+      b.addEventListener('click', () => moverItem(l));
+      grid.append(b);
     }
+    const nueva = el('button', { class: 'chip', type: 'button' }, '+ Lista nueva');
+    nueva.addEventListener('click', async () => {
+      $('itemMenu').close();
+      const name = await ask('Nombre de la nueva lista');
+      if (name && name.trim()) moverItem(ensureList(name.trim()));
+    });
+    grid.append(nueva);
+    $('itemMenu').showModal();
+  }
+  function moverItem(target) {
+    const { list, item } = menuItem;
+    if ($('itemMenu').open) $('itemMenu').close();
+    snapshot();
+    list.items = list.items.filter((i) => i.id !== item.id);
+    target.items.unshift(item);
+    save(); render();
+    toast(`Movido a ${target.emoji} ${target.name}`, true);
+  }
+  $('itemEdit').addEventListener('click', () => { $('itemMenu').close(); editarItem(menuItem.item); });
+  $('itemDelete').addEventListener('click', () => {
+    const { list, item } = menuItem;
+    $('itemMenu').close();
+    snapshot();
+    list.items = list.items.filter((i) => i.id !== item.id);
+    save(); render();
+    toast('Borrado', true);
+  });
+
+  // ---- Barra inferior: etiquetas para elegir lista y caja de texto ----
+  function renderChips() {
+    const box = $('chips');
+    const enLista = !!(currentListId && getList(currentListId));
+    box.hidden = enLista || listening;
+    if (box.hidden) return;
+    if (targetListId && !getList(targetListId)) targetListId = null;
+    box.replaceChildren(el('span', { class: 'chip-label', text: 'Apuntar en' }));
+    for (const l of state.lists) {
+      const on = l.id === targetListId;
+      const b = el('button', { class: 'chip', type: 'button', 'aria-pressed': String(on) }, `${l.emoji} ${l.name}`);
+      b.addEventListener('click', () => {
+        targetListId = on ? null : l.id;
+        render();
+        if (!on) $('textInput').focus({ preventScroll: true });
+      });
+      box.append(b);
+    }
+  }
+
+  function renderComposer() {
+    const l = getList(currentListId || targetListId);
+    $('textInput').placeholder = l && l.name !== INBOX_NAME ? `Añadir a ${l.name}…` : 'Escribe o pulsa el micro…';
+    const conTexto = !!$('textInput').value.trim();
+    $('sendBtn').hidden = !conTexto;
+  }
+  $('textInput').addEventListener('input', renderComposer);
+
+  $('listMenuBtn').addEventListener('click', () => {
+    const l = getList(currentListId);
+    if (!l) return;
+    $('listMenuTitle').textContent = `${l.emoji} ${l.name}`;
+    $('listMenu').showModal();
+  });
+  for (const id of ['renameListBtn', 'clearDoneBtn', 'deleteListBtn']) {
+    $(id).addEventListener('click', () => { if ($('listMenu').open) $('listMenu').close(); });
   }
 
   // ---------- Acciones de lista ----------
-  $('backBtn').addEventListener('click', () => { currentListId = null; render(); });
+  $('backBtn').addEventListener('click', () => { currentListId = null; render(); window.scrollTo(0, 0); });
   $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
   $('version').textContent = 'Versión ' + VERSION;
   $('notifyBtn').addEventListener('click', askNotifyPermission);
@@ -672,8 +790,7 @@
     snapshot();
     const list = ensureList(name.trim());
     save();
-    currentListId = list.id;
-    render();
+    openList(list.id);
   });
 
   $('clearDoneBtn').addEventListener('click', () => {
@@ -689,6 +806,7 @@
     const list = getList(currentListId);
     const name = await ask('Nuevo nombre', list.name);
     if (!name || !name.trim()) return;
+    snapshot();
     list.name = name.trim();
     list.emoji = emojiFor(list.name);
     save(); render();
@@ -730,18 +848,21 @@
   function renderCloud() {
     const N = window.DiloNube;
     const card = $('cloudCard');
+    const chip = $('cloudChip');
     if (!N) { card.hidden = true; return; }
-    card.hidden = false;
     const st = N.estado;
-    card.classList.toggle('off', st !== 'dentro');
-    if (st === 'cargando') { $('cloudTitle').textContent = 'Conectando con la nube…'; $('cloudSub').textContent = ''; }
-    else if (st === 'fuera') { $('cloudTitle').textContent = 'Guardar en la nube y compartir'; $('cloudSub').textContent = 'Entra con Google para ver lo mismo en varios móviles'; }
-    else if (st === 'sin-casa') { $('cloudTitle').textContent = 'Falta crear tu casa'; $('cloudSub').textContent = N.usuario.correo; }
-    else {
-      const n = (N.hogar.miembros || []).length;
-      $('cloudTitle').textContent = '☁️ Guardado en la nube';
-      $('cloudSub').textContent = `${N.hogar.nombre || 'Mi casa'} · ${n} ${n === 1 ? 'persona' : 'personas'}`;
-    }
+    // Botón redondo de arriba: tu foto (con punto verde si estás en la nube) o una nube
+    const u = N.usuario;
+    chip.replaceChildren();
+    if (u && u.foto) chip.append(el('img', { src: u.foto, alt: '' }));
+    else chip.textContent = '☁️';
+    chip.classList.toggle('on', st === 'dentro');
+    chip.setAttribute('aria-label', st === 'dentro' ? 'Nube y familia: conectado' : 'Nube y familia');
+    // Aviso grande solo mientras no estás dentro
+    card.hidden = st === 'dentro' || st === 'cargando';
+    if (st === 'fuera') { $('cloudTitle').textContent = 'Guarda tus listas en la nube'; $('cloudSub').textContent = 'Entra con Google y compártelas con tu familia'; }
+    else if (st === 'sin-casa') { $('cloudTitle').textContent = 'Falta crear tu casa'; $('cloudSub').textContent = u ? u.correo : ''; }
+    if (!$('homeView').hidden) $('saludo').textContent = saludo();
     if ($('cloudDialog').open) renderCloudDialog();
   }
 
@@ -819,7 +940,10 @@
     );
   }
 
-  $('cloudCard').addEventListener('click', () => { renderCloudDialog(); $('cloudDialog').showModal(); });
+  const abrirNube = () => { renderCloudDialog(); $('cloudDialog').showModal(); };
+  $('cloudCard').addEventListener('click', abrirNube);
+  $('cloudChip').addEventListener('click', abrirNube);
+  $('inboxBanner').addEventListener('click', () => { const b = inbox(); if (b) openList(b.id); });
 
   function conectarNube() {
     const N = window.DiloNube;
