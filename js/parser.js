@@ -17,7 +17,7 @@
   // Quita artículos y la palabra "lista" del principio: "la lista de la compra" -> "compra"
   function cleanListName(str) {
     return str
-      .replace(/^(?:(?:la|el|las|los|mi|mis)\s+)?(?:lista\s+(?:de\s+(?:la\s+|el\s+|las\s+|los\s+)?|llamada\s+)?)?/i, '')
+      .replace(/^(?:(?:la|el|las|los|mi|mis|una|un)\s+)?(?:lista\s+(?:(?:nueva|nuevo)\s+)?(?:de\s+(?:la\s+|el\s+|las\s+|los\s+)?|llamada\s+|que se llame\s+)?)?/i, '')
       .replace(/^(?:la|el|las|los)\s+/i, '')
       .trim();
   }
@@ -73,6 +73,14 @@
   }
 
   function parse(rawText, lists) {
+    const colon = rawText.indexOf(':');
+    if (colon > 0) {
+      const head = parse(rawText.slice(0, colon), lists);
+      const tail = rawText.slice(colon + 1).trim();
+      if (head && head.type === 'create' && !head.items && tail) {
+        return { type: 'create', list: head.list, items: splitItems(tail.replace(/[.!?¡¿;:]/g, '')) };
+      }
+    }
     // orig y text tienen la misma longitud: text es orig sin tildes y en minúsculas
     let orig = rawText.replace(/[.!?¡¿;:]/g, '').replace(/\s+/g, ' ').trim();
     orig = collapseRepeat(orig);
@@ -95,7 +103,17 @@
         const after = orig.slice(listIdx + 5).trim();
         const lead = normalize(after).match(NAME_LEAD_RE);
         const name = (lead ? after.slice(lead[0].length) : after).trim();
-        if (name) return { type: 'create', list: capitalize(name) };
+        if (name) {
+          // "crea una lista de viajes y apunta pasaporte" / "... con pasaporte y maleta"
+          const nn = normalize(name);
+          const sep = nn.match(new RegExp('\\s(?:y\\s+(?:' + ADD_VERBS.slice(3, -1) + ')|con|y dentro|y en ella(?:\\s+' + ADD_VERBS + ')?)\\s+'));
+          if (sep) {
+            const listName = name.slice(0, sep.index).trim();
+            const items = name.slice(sep.index + sep[0].length).trim();
+            if (listName && items) return { type: 'create', list: capitalize(listName), items: splitItems(items) };
+          }
+          return { type: 'create', list: capitalize(name) };
+        }
       }
     }
 
@@ -142,7 +160,7 @@
       // Si dice explícitamente "lista" y no existe, la creamos
       for (let i = cuts.length - 1; i >= 0; i--) {
         const c = cuts[i];
-        if (/^(?:(?:la|mi)\s+)?lista\b/.test(body.slice(c.idx + c.len))) {
+        if (/^(?:(?:la|mi|una)\s+)?lista\b/.test(body.slice(c.idx + c.len))) {
           const name = cleanListName(bodyOrig.slice(c.idx + c.len));
           if (name) {
             return { type: 'add', list: capitalize(name), items: splitItems(bodyOrig.slice(0, c.idx)), created: true };

@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.5';
+  const VERSION = '0.5.1';
   const $ = (id) => document.getElementById(id);
 
   // ---------- Datos ----------
@@ -132,6 +132,14 @@
     if (result.type === 'create') {
       const exists = findList(state.lists, result.list);
       const list = ensureList(result.list);
+      if (result.items && result.items.length) {
+        addItems(list, result.items);
+        save(); render();
+        const what = result.items.length === 1 ? `«${result.items[0]}»` : `${result.items.length} elementos`;
+        toast(`${list.emoji} ${exists ? '' : 'Lista nueva · '}${what} → ${list.name}`, true);
+        notifySaved(list, result.items);
+        return;
+      }
       save(); render();
       toast(exists ? `La lista «${list.name}» ya existía` : `Lista «${list.name}» creada`, true);
       return;
