@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.8';
+  const VERSION = '0.8.1';
   const $ = (id) => document.getElementById(id);
 
   // ---------- Datos ----------
@@ -53,7 +53,6 @@
   let state = load();
   let undoSnapshot = null;
   let currentListId = null;
-  let targetListId = null;              // lista elegida en las etiquetas de abajo
   const recienApuntados = new Set();    // para resaltar lo que se acaba de apuntar
 
   function save() {
@@ -282,7 +281,7 @@
     snapshot();
 
     // Si estás dentro de una lista y no nombras otra, va a la lista que tienes abierta
-    const open = getList(currentListId || targetListId);
+    const open = getList(currentListId);
     if (result.type === 'inbox' && open && open.name !== INBOX_NAME) {
       const items = window.VoiceParser.splitItems(result.items[0]);
       addItems(open, items);
@@ -332,7 +331,6 @@
     micBtn.classList.toggle('recording', on);
     micBtn.setAttribute('aria-label', on ? 'Parar' : 'Hablar');
     live.textContent = msg;
-    $('chips').hidden = on || !!(currentListId && getList(currentListId));
   }
 
   function startRecognition() {
@@ -568,19 +566,10 @@
     $('listView').hidden = !list;
     $('listHead').hidden = !list;
     if (list) renderList(list); else renderHome();
-    renderChips();
     renderComposer();
   }
 
   // ---- Inicio ----
-  function saludo() {
-    const h = new Date().getHours();
-    const base = h < 6 ? 'Buenas noches' : h < 14 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
-    const N = window.DiloNube;
-    const nombre = N && N.usuario && N.usuario.nombre ? N.usuario.nombre.split(' ')[0] : '';
-    return nombre ? `${base}, ${nombre}` : base;
-  }
-
   function leerAgenda() {
     try {
       const citas = JSON.parse(localStorage.getItem('agenda:c2')) || JSON.parse(localStorage.getItem('agenda:v1')) || [];
@@ -627,7 +616,6 @@
   function renderHome() {
     const hoy = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
     $('hoyFecha').textContent = hoy.charAt(0).toUpperCase() + hoy.slice(1);
-    $('saludo').textContent = saludo();
 
     const bandeja = inbox();
     const porOrdenar = bandeja ? bandeja.items.filter((i) => !i.done).length : 0;
@@ -669,28 +657,16 @@
     return `${fecha} ${hora}`;
   }
 
-  // Círculo con la foto o la inicial de una persona, en su color
-  function avatar(p) {
-    const a = el('span', { class: 'avatar', style: `--pc:${p.color}`, title: p.nombre, 'aria-hidden': 'true' });
-    if (p.foto) {
-      const img = el('img', { src: p.foto, alt: '', referrerpolicy: 'no-referrer' });
-      img.addEventListener('error', () => { img.remove(); a.textContent = p.inicial; });
-      a.append(img);
-    } else a.textContent = p.inicial;
-    return a;
-  }
-
   // Línea de debajo: quién lo apuntó y cuándo (y quién lo marcó como hecho)
   function quienYCuando(item) {
     const N = window.DiloNube;
-    const conGente = !!(N && N.persona && N.compartida);
-    const quien = (correo) => (conGente && correo ? N.persona(correo) : null);
+    const quien = (correo) => (N && N.persona && correo ? N.persona(correo) : null);
     const meta = el('span', { class: 'meta' });
     const trozo = (p, texto, cls) => {
       const t = el('span', { class: 'meta-part' + (cls ? ' ' + cls : '') });
-      if (cls) t.append(el('span', { class: 'meta-tick', text: '✓', 'aria-label': 'Hecho por' }));
-      if (p) t.append(avatar(p), el('span', { class: 'meta-who', text: p.nombre }), ' · ');
+      if (cls) t.append(el('span', { class: 'meta-tick', text: '✓', 'aria-label': 'Hecho' }));
       t.append(texto);
+      if (p) t.append(' · ', el('span', { class: 'meta-who', text: p.nombre }));
       meta.append(t);
     };
     trozo(quien(item.by), cuandoFue(item.createdAt));
@@ -804,28 +780,9 @@
     toast('Borrado', true);
   });
 
-  // ---- Barra inferior: etiquetas para elegir lista y caja de texto ----
-  function renderChips() {
-    const box = $('chips');
-    const enLista = !!(currentListId && getList(currentListId));
-    box.hidden = enLista || listening;
-    if (box.hidden) return;
-    if (targetListId && !getList(targetListId)) targetListId = null;
-    box.replaceChildren(el('span', { class: 'chip-label', text: 'Apuntar en' }));
-    for (const l of state.lists) {
-      const on = l.id === targetListId;
-      const b = el('button', { class: 'chip', type: 'button', 'aria-pressed': String(on) }, `${l.emoji} ${l.name}`);
-      b.addEventListener('click', () => {
-        targetListId = on ? null : l.id;
-        render();
-        if (!on) $('textInput').focus({ preventScroll: true });
-      });
-      box.append(b);
-    }
-  }
-
+  // ---- Barra inferior: caja de texto ----
   function renderComposer() {
-    const l = getList(currentListId || targetListId);
+    const l = getList(currentListId);
     $('textInput').placeholder = l && l.name !== INBOX_NAME ? `Añadir a ${l.name}…` : 'Escribe o pulsa el micro…';
     const conTexto = !!$('textInput').value.trim();
     $('sendBtn').hidden = !conTexto;
@@ -927,7 +884,6 @@
     card.hidden = st === 'dentro' || st === 'cargando';
     if (st === 'fuera') { $('cloudTitle').textContent = 'Guarda tus listas en la nube'; $('cloudSub').textContent = 'Entra con Google y compártelas con tu familia'; }
     else if (st === 'sin-casa') { $('cloudTitle').textContent = 'Falta crear tu casa'; $('cloudSub').textContent = u ? u.correo : ''; }
-    if (!$('homeView').hidden) $('saludo').textContent = saludo();
     if ($('cloudDialog').open) renderCloudDialog();
   }
 
