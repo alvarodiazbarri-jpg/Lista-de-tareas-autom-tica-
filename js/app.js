@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.10';
+  const VERSION = '0.11';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -579,14 +579,43 @@
   });
 
   // ---------- Render ----------
-  // Color de cada lista (siempre el mismo para el mismo nombre, en todos los móviles)
-  const COLORES = ['#1D6FD1', '#2F8F6B', '#E08A00', '#8A4FBF', '#D1495B', '#0E9AA7', '#A8643A', '#558B2F'];
-  function colorDe(list) {
-    if (list.name === INBOX_NAME) return '#44515F';
-    const n = window.VoiceParser.normalize(list.name);
-    let h = 0;
-    for (const c of n) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-    return COLORES[h % COLORES.length];
+  // Colores de las listas: cada lista tiene un color distinto según su puesto (el mismo en todos los
+  // móviles, porque el orden de las listas está en la nube). Hay varios juegos para elegir en «?».
+  // Cada color: [fondo, fondo2 (para el degradado)]. La Bandeja de entrada va siempre en gris.
+  const PALETAS = {
+    vivos: { n: 'Vivos', bandeja: ['#546E7A', '#37474F'], c: [
+      ['#E53935', '#B71C1C'], ['#1E88E5', '#0D47A1'], ['#43A047', '#1B5E20'], ['#FB8C00', '#E65100'],
+      ['#8E24AA', '#4A148C'], ['#00ACC1', '#006064'], ['#D81B60', '#880E4F'], ['#6D4C41', '#3E2723'],
+      ['#3949AB', '#1A237E'], ['#7CB342', '#33691E'], ['#F4511E', '#BF360C'], ['#00897B', '#004D40']] },
+    pastel: { n: 'Pastel', bandeja: ['#CFD8DC', '#B0BEC5'], c: [
+      ['#FFCDD2', '#EF9A9A'], ['#BBDEFB', '#90CAF9'], ['#C8E6C9', '#A5D6A7'], ['#FFE0B2', '#FFCC80'],
+      ['#E1BEE7', '#CE93D8'], ['#B2EBF2', '#80DEEA'], ['#F8BBD0', '#F48FB1'], ['#D7CCC8', '#BCAAA4'],
+      ['#C5CAE9', '#9FA8DA'], ['#DCEDC8', '#C5E1A5'], ['#FFF9C4', '#FFF59D'], ['#B2DFDB', '#80CBC4']] },
+    profundos: { n: 'Profundos', bandeja: ['#37474F', '#263238'], c: [
+      ['#9B2335', '#6E1423'], ['#1F4E8C', '#12325E'], ['#2E6B3A', '#1B4424'], ['#A0520F', '#6E3708'],
+      ['#5B2E83', '#3A1C56'], ['#0F6B66', '#084642'], ['#8C1D56', '#5E1239'], ['#5A4034', '#3B2A22'],
+      ['#2B3A8C', '#1B255C'], ['#4F6B1E', '#334612'], ['#0D6577', '#08424E'], ['#7A3B12', '#50260B']] },
+    degradados: { n: 'Degradados', bandeja: ['#607D8B', '#37474F'], c: [
+      ['#FF5F6D', '#FFC371'], ['#36D1DC', '#5B86E5'], ['#56AB2F', '#A8E063'], ['#F7971E', '#FFD200'],
+      ['#8E2DE2', '#C86DD7'], ['#11998E', '#38EF7D'], ['#EC008C', '#FC6767'], ['#C79081', '#8E5A4B'],
+      ['#4776E6', '#8E54E9'], ['#F953C6', '#B91D73'], ['#00B4DB', '#0083B0'], ['#E96443', '#904E95']] },
+  };
+  const PALETA_KEY = 'dilo:paleta';
+  let paleta = (() => { try { return PALETAS[localStorage.getItem(PALETA_KEY)] ? localStorage.getItem(PALETA_KEY) : 'vivos'; } catch (e) { return 'vivos'; } })();
+  function coloresDe(list) {
+    const P = PALETAS[paleta];
+    if (list.name === INBOX_NAME) return P.bandeja;
+    const resto = state.lists.filter((l) => l.name !== INBOX_NAME);
+    const i = Math.max(0, resto.findIndex((l) => l.id === list.id));
+    return P.c[i % P.c.length];
+  }
+  const colorDe = (list) => coloresDe(list)[0];
+  function estiloTarjeta(list) {
+    const [c1, c2] = coloresDe(list);
+    // Letras blancas salvo en colores muy claros (pastel)
+    const t = luz(c1) > 0.45 ? '#16202B' : '#FFFFFF';
+    const fondo = paleta === 'degradados' ? `linear-gradient(135deg, ${c1}, ${c2})` : `linear-gradient(160deg, ${c1}, ${c2})`;
+    return `--hue:${c1};--hue-bg:${fondo};--tile-t:${t}`;
   }
 
   function render() {
@@ -620,6 +649,11 @@
   }
 
   // Color de contraste (negro o blanco) para escribir encima de un color
+  function luz(hex) {
+    const n = parseInt(String(hex).slice(1), 16);
+    const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+  }
   function tinta(hex) {
     const n = parseInt(String(hex).slice(1), 16);
     if (isNaN(n)) return '#fff';
@@ -683,11 +717,11 @@
     wrap.replaceChildren();
     for (const l of state.lists) {
       const pend = l.items.filter((i) => !i.done);
-      const tile = el('button', { class: 'tile', type: 'button', style: `--hue:${colorDe(l)}`, 'aria-label': `${l.name}, ${pend.length} pendientes` },
-        el('span', { class: 'tile-top' },
-          el('span', { class: 'tile-emoji', text: l.emoji }),
-          el('span', { class: 'tile-count' + (pend.length ? ' has' : ''), text: String(pend.length) })),
-        el('span', { class: 'tile-name', text: l.name }));
+      const tile = el('button', { class: 'tile', type: 'button', style: estiloTarjeta(l), 'aria-label': `${l.name}, ${pend.length} pendientes` },
+        el('span', { class: 'tile-emoji', text: l.emoji }),
+        el('span', { class: 'tile-foot' },
+          el('span', { class: 'tile-name', text: l.name }),
+          el('span', { class: 'tile-count' + (pend.length ? ' has' : ''), text: String(pend.length) })));
       tile.addEventListener('click', () => { openList(l.id); });
       wrap.appendChild(tile);
     }
@@ -717,6 +751,7 @@
     const h = Math.floor(Math.max(min, Math.min(ALTO_MAX, alto(cols))));
     grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
     grid.style.gridAutoRows = h + 'px';
+    grid.style.setProperty('--th', h + 'px');
     grid.classList.toggle('mini', estilo === 'mini' || (!estilo && h < 96));
     grid.classList.toggle('fila', estilo === 'fila');
   }
@@ -807,7 +842,7 @@
     const isInbox = list.name === INBOX_NAME;
     const pend = list.items.filter((i) => !i.done).sort((a, b) => pesoEtiqueta(a) - pesoEtiqueta(b));
     const hechas = list.items.filter((i) => i.done);
-    document.documentElement.style.setProperty('--hue', colorDe(list));
+    document.documentElement.style.setProperty('--hue', coloresDe(list)[paleta === 'pastel' ? 1 : 0]);
     $('listEmoji').textContent = list.emoji;
     $('title').textContent = list.name;
     $('listSub').textContent = list.items.length
@@ -921,7 +956,24 @@
 
   // ---------- Acciones de lista ----------
   $('backBtn').addEventListener('click', () => { currentListId = null; render(); window.scrollTo(0, 0); });
-  $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
+  $('helpBtn').addEventListener('click', () => { renderPaletas(); $('helpDialog').showModal(); });
+
+  // Elegir los colores de las listas (se guarda en este móvil)
+  function renderPaletas() {
+    const box = $('paletas');
+    box.replaceChildren();
+    for (const [id, P] of Object.entries(PALETAS)) {
+      const muestra = el('span', { class: 'pal-muestra' },
+        ...P.c.slice(0, 6).map(([c1, c2]) => el('i', { style: `background:linear-gradient(135deg, ${c1}, ${c2})` })));
+      const b = el('button', { class: 'pal', type: 'button', 'aria-pressed': String(id === paleta) }, muestra, el('span', { text: P.n }));
+      b.addEventListener('click', () => {
+        paleta = id;
+        try { localStorage.setItem(PALETA_KEY, id); } catch (e) {}
+        renderPaletas(); render();
+      });
+      box.append(b);
+    }
+  }
   $('version').textContent = 'Versión ' + VERSION;
   $('notifyBtn').addEventListener('click', askNotifyPermission);
   renderNotifyBtn();
