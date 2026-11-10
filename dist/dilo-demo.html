@@ -412,6 +412,7 @@ dialog li { margin-bottom: 6px; }
 }
 .cloud-row .primary-btn { width: auto; }
 .cloud-note { font-size: .85rem; }
+.cloud-old { color: var(--danger); font-weight: 700; }
 .google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -769,8 +770,9 @@ dialog li { margin-bottom: 6px; }
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.8.1';
+  const VERSION = '0.8.2';
   const $ = (id) => document.getElementById(id);
+  window.DILO_VERSION = VERSION;
 
   // ---------- Datos ----------
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -839,12 +841,22 @@ dialog li { margin-bottom: 6px; }
   const canon = (o) => JSON.stringify(Object.keys(o).sort().map((k) => [k, o[k]]));
   const limpio = (o) => JSON.parse(JSON.stringify(o));
 
+  // Datos de la nube que esta versión de Dilo no usa (p. ej. de una versión más nueva):
+  // se guardan en «otros» y se vuelven a subir tal cual, para no borrarlos nunca.
+  const CAMPOS_LISTA = ['name', 'emoji', 'orden'];
+  const CAMPOS_ITEM = ['listId', 'text', 'done', 'createdAt', 'audioId', 'by', 'doneBy', 'doneAt'];
+  function otrosCampos(data, conocidos) {
+    const o = {};
+    for (const k of Object.keys(data)) if (!conocidos.includes(k)) o[k] = data[k];
+    return Object.keys(o).length ? o : null;
+  }
+
   function docsLocales() {
-    const listas = state.lists.map((l, i) => ({ id: l.id, data: { name: l.name, emoji: l.emoji || emojiFor(l.name), orden: i } }));
+    const listas = state.lists.map((l, i) => ({ id: l.id, data: { ...(l.otros || {}), name: l.name, emoji: l.emoji || emojiFor(l.name), orden: i } }));
     const items = [];
     for (const l of state.lists) {
       for (const it of l.items) {
-        const d = { listId: l.id, text: it.text, done: !!it.done, createdAt: it.createdAt || 0 };
+        const d = { ...(it.otros || {}), listId: l.id, text: it.text, done: !!it.done, createdAt: it.createdAt || 0 };
         if (it.audioId) d.audioId = it.audioId;
         if (it.by) d.by = it.by;
         if (it.done && it.doneBy) d.doneBy = it.doneBy;
@@ -880,7 +892,12 @@ dialog li { margin-bottom: 6px; }
   function estadoDeLaNube() {
     const lists = nubeDocs.listas
       .slice().sort((a, b) => (a.data.orden || 0) - (b.data.orden || 0))
-      .map((d) => ({ id: d.id, name: d.data.name || 'Lista', emoji: d.data.emoji || emojiFor(d.data.name || ''), items: [] }));
+      .map((d) => {
+        const l = { id: d.id, name: d.data.name || 'Lista', emoji: d.data.emoji || emojiFor(d.data.name || ''), items: [] };
+        const otros = otrosCampos(d.data, CAMPOS_LISTA);
+        if (otros) l.otros = otros;
+        return l;
+      });
     const porId = new Map(lists.map((l) => [l.id, l]));
     for (const d of nubeDocs.items) {
       const l = porId.get(d.data.listId);
@@ -890,6 +907,8 @@ dialog li { margin-bottom: 6px; }
       if (d.data.by) it.by = d.data.by;
       if (d.data.doneBy) it.doneBy = d.data.doneBy;
       if (d.data.doneAt) it.doneAt = d.data.doneAt;
+      const otros = otrosCampos(d.data, CAMPOS_ITEM);
+      if (otros) it.otros = otros;
       l.items.push(it);
     }
     lists.forEach((l) => l.items.sort((a, b) => b.createdAt - a.createdAt));
@@ -1703,7 +1722,11 @@ dialog li { margin-bottom: 6px; }
     const lista = el('ul', { class: 'cloud-members' });
     for (const m of h.miembros || []) {
       const yo = m === u.correo;
-      lista.append(el('li', {}, el('span', { text: m + (yo ? ' (tú)' : '') }),
+      const v = N.versionDe ? N.versionDe(m) : '';
+      const vieja = !v || v !== VERSION;
+      lista.append(el('li', {}, el('span', {}, m + (yo ? ' (tú)' : ''), el('br'),
+        el('small', { class: 'cloud-note' + (vieja && !yo ? ' cloud-old' : ''),
+          text: v ? `Dilo ${v}${vieja && !yo ? ' · tiene que actualizar' : ''}` : 'Dilo antigua · tiene que actualizar' })),
         yo ? null : el('button', { type: 'button', onclick: async (e) => {
           if (!(await ask(`¿Quitar a ${m} de la casa? Dejará de ver vuestras listas y citas.`, null, 'Quitar'))) return;
           conEspera(e.currentTarget, () => N.quitar(m));
@@ -1783,4 +1806,4 @@ dialog li { margin-bottom: 6px; }
   }, 60000);
 })();
 </script>
-  <script type="module" src="js/nube.js?v=0.8.1"></script>
+  <script type="module" src="js/nube.js?v=0.8.2"></script>

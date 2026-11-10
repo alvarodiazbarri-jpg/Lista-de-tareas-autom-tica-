@@ -62,6 +62,7 @@ function seguirPerfiles(id) {
   if (yo && user) {
     setDoc(doc(db, 'hogares', id, 'perfiles', yo), {
       nombre: user.displayName || '', foto: user.photoURL || '', visto: serverTimestamp(),
+      version: window.DILO_VERSION || '',
     }).catch(() => {});
   }
   perfilesUnsub = onSnapshot(collection(db, 'hogares', id, 'perfiles'), (s) => {
@@ -179,6 +180,8 @@ const api = {
   get error() { return ultimoError; },
   db: baseDeLaCasa,
   persona,
+  // Versión de Dilo que usó cada persona la última vez ('' si es anterior a la 0.8)
+  versionDe(email) { const p = perfiles.get((email || '').toLowerCase()); return p ? (p.version || '0.8') : ''; },
   // ¿Hay más de una persona en la casa? (si estás solo, no hace falta decir quién apuntó)
   get compartida() { return !!(hogar && (hogar.miembros || []).length > 1); },
 
