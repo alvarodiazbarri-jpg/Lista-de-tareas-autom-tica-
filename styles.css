@@ -409,6 +409,7 @@ dialog li { margin-bottom: 6px; }
 }
 .cloud-row .primary-btn { width: auto; }
 .cloud-note { font-size: .85rem; }
+.cloud-old { color: var(--danger); font-weight: 700; }
 .google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; }
 
 @media (prefers-reduced-motion: reduce) {
