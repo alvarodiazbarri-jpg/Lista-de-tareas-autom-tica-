@@ -1,5 +1,5 @@
 // Service worker: permite abrir la app sin conexión.
-const CACHE = 'dilo-v4';
+const CACHE = 'dilo-v5';
 const ASSETS = [
   './',
   'index.html',
@@ -8,6 +8,8 @@ const ASSETS = [
   'js/app.js',
   'manifest.webmanifest',
   'icons/icon.svg',
+  'icons/icon-192.png',
+  'icons/badge-96.png',
 ];
 
 self.addEventListener('install', (e) => {
@@ -38,5 +40,23 @@ self.addEventListener('fetch', (e) => {
         return (await caches.match(e.request, { ignoreSearch: true })) || res;
       })
       .catch(() => caches.match(e.request, { ignoreSearch: true }))
+  );
+});
+
+// Al tocar la notificación de "Apuntado": abrir la app en esa lista para revisarlo
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const listId = e.notification.data && e.notification.data.listId;
+  const url = new URL('./' + (listId ? '?lista=' + encodeURIComponent(listId) : ''), self.registration.scope).href;
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        if (w.url.startsWith(self.registration.scope)) {
+          w.postMessage({ openList: listId });
+          return w.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    })
   );
 });

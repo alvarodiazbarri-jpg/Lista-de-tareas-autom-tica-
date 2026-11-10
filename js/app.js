@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.3.1';
+  const VERSION = '0.4';
   const $ = (id) => document.getElementById(id);
 
   // ---------- Datos ----------
@@ -125,6 +125,7 @@
       save(); render();
       const what = items.length === 1 ? `«${items[0]}»` : `${items.length} elementos`;
       toast(`${open.emoji} ${what} → ${open.name}`, true);
+      notifySaved(open, items);
       return;
     }
 
@@ -141,6 +142,7 @@
     save(); render();
     const what = result.items.length === 1 ? `«${result.items[0]}»` : `${result.items.length} elementos`;
     toast(`${list.emoji} ${what} → ${list.name}${result.created ? ' (nueva)' : ''}`, true);
+    notifySaved(list, result.items);
   }
 
   // ---------- Voz ----------
@@ -262,6 +264,7 @@
   }
 
   micBtn.addEventListener('click', () => {
+    askNotifyPermission();
     if (listening) {
       if (recognition) recognition.stop();
       if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
@@ -282,6 +285,51 @@
     handleInput(text);
     input.value = '';
   });
+
+  // ---------- Notificación de confirmación ----------
+  // Tras apuntar algo, sale un aviso en el móvil. Al tocarlo se abre la lista para revisarlo.
+  const canNotify = () => 'Notification' in window && 'serviceWorker' in navigator;
+
+  function askNotifyPermission() {
+    if (canNotify() && Notification.permission === 'default') {
+      Notification.requestPermission().then(renderNotifyBtn).catch(() => {});
+    }
+  }
+
+  async function notifySaved(list, items) {
+    if (!canNotify() || Notification.permission !== 'granted') return;
+    try {
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((r) => setTimeout(() => r(null), 3000)),
+      ]);
+      if (!reg) return;
+      await reg.showNotification(`✅ Apuntado en ${list.name}`, {
+        body: items.join(' · ') + '\nToca para revisarlo',
+        icon: 'icons/icon-192.png',
+        badge: 'icons/badge-96.png',
+        tag: 'dilo-' + Date.now(),
+        data: { listId: list.id },
+      });
+    } catch (e) { /* sin notificaciones: queda el aviso dentro de la app */ }
+  }
+
+  function renderNotifyBtn() {
+    const b = $('notifyBtn');
+    if (!canNotify()) { b.hidden = true; return; }
+    const p = Notification.permission;
+    b.textContent = p === 'granted' ? '🔔 Notificaciones activadas'
+      : p === 'denied' ? '🔕 Notificaciones bloqueadas (actívalas en Ajustes del móvil)'
+      : '🔔 Activar notificaciones';
+    b.disabled = p !== 'default';
+  }
+
+  function openList(id) {
+    if (!getList(id)) return;
+    currentListId = id;
+    render();
+    window.scrollTo(0, 0);
+  }
 
   // ---------- Diálogo propio (sustituye a prompt/confirm) ----------
   // ask(titulo, valor) -> texto o null; ask(titulo, null, 'Botón') -> true/false
@@ -456,6 +504,8 @@
   $('backBtn').addEventListener('click', () => { currentListId = null; render(); });
   $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
   $('version').textContent = 'Versión ' + VERSION;
+  $('notifyBtn').addEventListener('click', askNotifyPermission);
+  renderNotifyBtn();
 
   $('newListBtn').addEventListener('click', async () => {
     const name = await ask('Nombre de la nueva lista');
@@ -506,7 +556,16 @@
   })();
 
   // Atajo: abrir la app con ?voz para empezar a hablar directamente
-  if (new URLSearchParams(location.search).has('voz')) {
+  // Al tocar una notificación: abrir la lista donde se apuntó
+  const params = new URLSearchParams(location.search);
+  if (params.has('lista')) currentListId = getList(params.get('lista')) ? params.get('lista') : null;
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      if (e.data && e.data.openList) openList(e.data.openList);
+    });
+  }
+
+  if (params.has('voz')) {
     setTimeout(() => micBtn.click(), 300);
   }
 
