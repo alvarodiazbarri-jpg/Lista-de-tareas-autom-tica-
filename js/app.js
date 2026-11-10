@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.5.1';
+  const VERSION = '0.6';
   const $ = (id) => document.getElementById(id);
 
   // ---------- Datos ----------
@@ -57,6 +57,137 @@
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
     catch (e) { toast('⚠️ No se pudo guardar en este dispositivo'); }
+    pushCloud();
+  }
+
+  // ---------- Nube: listas compartidas con la casa ----------
+  // En la nube cada lista es un documento de «listas» y cada cosa apuntada uno de «items».
+  // Al guardar se suben solo los cambios; lo que llega de otro móvil reemplaza el estado.
+  let nubeDB = null;
+  let nubeUnsubs = [];
+  let nubeMigrada = false;
+  const nubeDocs = { listas: [], items: [] };
+  const nubeListo = { listas: false, items: false };     // ya llegó la respuesta del servidor
+  const subido = { listas: new Map(), items: new Map() };  // lo último que hay en la nube
+  const canon = (o) => JSON.stringify(Object.keys(o).sort().map((k) => [k, o[k]]));
+  const limpio = (o) => JSON.parse(JSON.stringify(o));
+
+  function docsLocales() {
+    const listas = state.lists.map((l, i) => ({ id: l.id, data: { name: l.name, emoji: l.emoji || emojiFor(l.name), orden: i } }));
+    const items = [];
+    for (const l of state.lists) {
+      for (const it of l.items) {
+        const d = { listId: l.id, text: it.text, done: !!it.done, createdAt: it.createdAt || 0 };
+        if (it.audioId) d.audioId = it.audioId;
+        items.push({ id: it.id, data: d });
+      }
+    }
+    return { listas, items };
+  }
+
+  function fallaNube(e) {
+    if (e && e.code === 'permission-denied') toast('⚠️ No tienes permiso en esta casa. Revisa la invitación.');
+  }
+
+  function pushCloud() {
+    if (!nubeDB || !nubeMigrada) return;
+    const locales = docsLocales();
+    for (const col of ['listas', 'items']) {
+      const mapa = subido[col];
+      const ids = new Set();
+      for (const d of locales[col]) {
+        ids.add(d.id);
+        const c = canon(d.data);
+        if (mapa.get(d.id) !== c) { mapa.set(d.id, c); nubeDB.collection(col).doc(d.id).set(limpio(d.data)).catch(fallaNube); }
+      }
+      for (const id of [...mapa.keys()]) {
+        if (!ids.has(id)) { mapa.delete(id); nubeDB.collection(col).doc(id).delete().catch(fallaNube); }
+      }
+    }
+  }
+
+  // Construye las listas a partir de lo que hay en la nube
+  function estadoDeLaNube() {
+    const lists = nubeDocs.listas
+      .slice().sort((a, b) => (a.data.orden || 0) - (b.data.orden || 0))
+      .map((d) => ({ id: d.id, name: d.data.name || 'Lista', emoji: d.data.emoji || emojiFor(d.data.name || ''), items: [] }));
+    const porId = new Map(lists.map((l) => [l.id, l]));
+    for (const d of nubeDocs.items) {
+      const l = porId.get(d.data.listId);
+      if (!l) continue;
+      const it = { id: d.id, text: d.data.text || '', done: !!d.data.done, createdAt: d.data.createdAt || 0 };
+      if (d.data.audioId) it.audioId = d.data.audioId;
+      l.items.push(it);
+    }
+    lists.forEach((l) => l.items.sort((a, b) => b.createdAt - a.createdAt));
+    return { lists };
+  }
+
+  function recordarSubido() {
+    for (const col of ['listas', 'items']) {
+      subido[col] = new Map(nubeDocs[col].map((d) => [d.id, canon(d.data)]));
+    }
+  }
+
+  const claveMigrada = () => 'dilo:nube:' + nubeDB.hogarId;
+
+  // Primera vez en este móvil: juntar lo que había aquí con lo que hay en la nube.
+  // Las listas con el mismo nombre se unen; no se borra nada.
+  function migrarAlaNube() {
+    const nube = estadoDeLaNube();
+    const norm = (n) => window.VoiceParser.normalize(n);
+    let nuevas = 0;
+    for (const local of state.lists) {
+      let destino = nube.lists.find((l) => l.id === local.id) || nube.lists.find((l) => norm(l.name) === norm(local.name));
+      if (!destino) {
+        destino = { id: local.id, name: local.name, emoji: local.emoji, items: [] };
+        nube.lists.push(destino);
+      }
+      for (const it of local.items) {
+        if (!nube.lists.some((l) => l.items.some((x) => x.id === it.id))) { destino.items.push(it); nuevas++; }
+      }
+      destino.items.sort((a, b) => b.createdAt - a.createdAt);
+    }
+    if (!nube.lists.some((l) => l.name === INBOX_NAME)) nube.lists.unshift({ id: uid(), name: INBOX_NAME, emoji: '📥', items: [] });
+    state = nube;
+    recordarSubido();
+    nubeMigrada = true;
+    try { localStorage.setItem(claveMigrada(), '1'); } catch (e) {}
+    if (currentListId && !getList(currentListId)) currentListId = null;
+    save();      // sube lo que faltaba
+    render();
+    if (nuevas) toast(`☁️ ${nuevas} ${nuevas === 1 ? 'cosa apuntada pasada' : 'cosas apuntadas pasadas'} a la nube`);
+  }
+
+  function alCambiarLaNube() {
+    if (!nubeListo.listas || !nubeListo.items) return;
+    if (!nubeMigrada) { migrarAlaNube(); return; }
+    const nube = estadoDeLaNube();
+    if (!nube.lists.some((l) => l.name === INBOX_NAME)) nube.lists.unshift({ id: uid(), name: INBOX_NAME, emoji: '📥', items: [] });
+    state = nube;
+    recordarSubido();
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    pushCloud();   // por si hubo que crear la bandeja
+    if (currentListId && !getList(currentListId)) currentListId = null;
+    render();
+  }
+
+  function conectarListas(base) {
+    nubeUnsubs.forEach((u) => { try { u(); } catch (e) {} });
+    nubeUnsubs = [];
+    nubeDB = base;
+    nubeListo.listas = nubeListo.items = false;
+    nubeDocs.listas = []; nubeDocs.items = [];
+    if (!base) { nubeMigrada = false; return; }
+    nubeMigrada = (() => { try { return localStorage.getItem(claveMigrada()) === '1'; } catch (e) { return false; } })();
+    for (const col of ['listas', 'items']) {
+      nubeUnsubs.push(base.collection(col).onSnapshot((snap) => {
+        nubeDocs[col] = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+        // Para juntar por primera vez esperamos la respuesta del servidor, no solo la caché
+        if (!snap.metadata.fromCache || nubeMigrada) nubeListo[col] = true;
+        alCambiarLaNube();
+      }, fallaNube));
+    }
   }
 
   function snapshot() { undoSnapshot = JSON.stringify(state); }
@@ -74,9 +205,10 @@
   }
 
   function addItems(list, texts, extra = {}) {
-    for (const text of [...texts].reverse()) {
-      list.items.unshift({ id: uid(), text, done: false, createdAt: Date.now(), ...extra });
-    }
+    const ahora = Date.now();
+    [...texts].reverse().forEach((text, i) => {
+      list.items.unshift({ id: uid(), text, done: false, createdAt: ahora + i, ...extra });
+    });
   }
 
   // ---------- Audio (IndexedDB) ----------
@@ -397,7 +529,8 @@
   // Citas pendientes de «Mi agenda» (se guarda aparte, en agenda.html)
   function agendaPending() {
     try {
-      const citas = JSON.parse(localStorage.getItem('agenda:v1')) || [];
+      // La agenda guarda en 'agenda:c2' cuando está en la nube y en 'agenda:v1' cuando no
+      const citas = JSON.parse(localStorage.getItem('agenda:c2')) || JSON.parse(localStorage.getItem('agenda:v1')) || [];
       const d = new Date();
       const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       return citas.filter((c) => c.fecha >= today && (c.estado || (c.hecha ? 'hecha' : 'pendiente')) === 'pendiente').length;
@@ -580,6 +713,128 @@
       req.onsuccess = () => req.result.forEach((k) => { if (!used.has(k)) deleteAudio(k); });
     } catch (e) { /* sin IndexedDB */ }
   })();
+
+  // ---------- Nube: tarjeta y ventana «Nube y familia» ----------
+  const el = (tag, props = {}, ...kids) => {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === 'text') e.textContent = v;
+      else if (k === 'class') e.className = v;
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+      else e.setAttribute(k, v);
+    }
+    e.append(...kids.filter(Boolean));
+    return e;
+  };
+
+  function renderCloud() {
+    const N = window.DiloNube;
+    const card = $('cloudCard');
+    if (!N) { card.hidden = true; return; }
+    card.hidden = false;
+    const st = N.estado;
+    card.classList.toggle('off', st !== 'dentro');
+    if (st === 'cargando') { $('cloudTitle').textContent = 'Conectando con la nube…'; $('cloudSub').textContent = ''; }
+    else if (st === 'fuera') { $('cloudTitle').textContent = 'Guardar en la nube y compartir'; $('cloudSub').textContent = 'Entra con Google para ver lo mismo en varios móviles'; }
+    else if (st === 'sin-casa') { $('cloudTitle').textContent = 'Falta crear tu casa'; $('cloudSub').textContent = N.usuario.correo; }
+    else {
+      const n = (N.hogar.miembros || []).length;
+      $('cloudTitle').textContent = '☁️ Guardado en la nube';
+      $('cloudSub').textContent = `${N.hogar.nombre || 'Mi casa'} · ${n} ${n === 1 ? 'persona' : 'personas'}`;
+    }
+    if ($('cloudDialog').open) renderCloudDialog();
+  }
+
+  async function conEspera(btn, fn) {
+    const t = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Un momento…';
+    try { await fn(); } catch (e) {
+      const c = e && e.code;
+      toast(c === 'auth/unauthorized-domain' ? '⚠️ Falta autorizar la dirección de Dilo en Firebase (Dominios autorizados)'
+        : c === 'auth/network-request-failed' || c === 'unavailable' ? '⚠️ Sin conexión. Inténtalo con internet.'
+        : e && e.message === 'correo' ? 'Escribe un correo válido, por ejemplo nombre@gmail.com'
+        : '⚠️ No se pudo hacer. ' + (c || ''));
+    } finally { btn.disabled = false; btn.textContent = t; }
+  }
+
+  function renderCloudDialog() {
+    const N = window.DiloNube;
+    const body = $('cloudBody');
+    body.replaceChildren();
+    if (!N || N.estado === 'cargando') { body.append(el('p', { text: 'Conectando…' })); return; }
+
+    if (N.estado === 'fuera') {
+      body.append(
+        el('p', { text: 'Con la nube, tus listas y tu agenda se guardan en internet: no se pierden si cambias de móvil, y puedes compartirlas con tu familia.' }),
+        el('button', { class: 'primary-btn google-btn', type: 'button', onclick: (e) => conEspera(e.currentTarget, () => N.entrar()) }, 'Entrar con Google'),
+        el('p', { class: 'cloud-note', text: 'Solo podrán ver tus datos las personas que tú invites.' }),
+      );
+      return;
+    }
+
+    const u = N.usuario;
+    body.append(el('div', { class: 'cloud-who' },
+      u.foto ? el('img', { src: u.foto, alt: '' }) : null,
+      el('div', {}, el('b', { text: u.nombre || u.correo }), el('br'), el('span', { class: 'cloud-note', text: u.correo }))));
+
+    if (N.estado === 'sin-casa') {
+      const nombre = el('input', { type: 'text', id: 'casaNombre', placeholder: 'Ej.: Casa de Álvaro y Bea' });
+      nombre.value = 'Casa de ' + ((u.nombre || '').split(' ')[0] || 'la familia');
+      body.append(
+        el('p', { text: 'Todavía no estás en ninguna casa.' }),
+        el('p', { class: 'cloud-note', text: 'Si alguien te va a invitar a la suya, pídele que lo haga y pulsa «Buscar de nuevo». Si eres el primero, crea la tuya.' }),
+        el('div', { class: 'cloud-row' }, nombre),
+        el('button', { class: 'primary-btn', type: 'button', onclick: (e) => conEspera(e.currentTarget, () => N.crearHogar(nombre.value)) }, 'Crear mi casa'),
+        el('button', { class: 'ghost-btn', type: 'button', onclick: (e) => conEspera(e.currentTarget, () => N.buscarDeNuevo()) }, 'Buscar de nuevo (ya me han invitado)'),
+        el('button', { class: 'ghost-btn', type: 'button', onclick: (e) => conEspera(e.currentTarget, () => N.salir()) }, 'Salir de la cuenta'),
+      );
+      return;
+    }
+
+    const h = N.hogar;
+    const lista = el('ul', { class: 'cloud-members' });
+    for (const m of h.miembros || []) {
+      const yo = m === u.correo;
+      lista.append(el('li', {}, el('span', { text: m + (yo ? ' (tú)' : '') }),
+        yo ? null : el('button', { type: 'button', onclick: async (e) => {
+          if (!(await ask(`¿Quitar a ${m} de la casa? Dejará de ver vuestras listas y citas.`, null, 'Quitar'))) return;
+          conEspera(e.currentTarget, () => N.quitar(m));
+        } }, 'Quitar')));
+    }
+    const email = el('input', { type: 'email', id: 'invitarCorreo', placeholder: 'correo@gmail.com', autocomplete: 'off' });
+    body.append(
+      el('p', { text: `Casa: ${h.nombre || 'Mi casa'}` }),
+      el('b', { text: 'Quién puede verla' }),
+      lista,
+      el('b', { text: 'Invitar a alguien' }),
+      el('p', { class: 'cloud-note', text: 'Escribe su correo de Google (Gmail). Luego esa persona abre Dilo en su móvil, pulsa «Entrar con Google» y verá todo.' }),
+      el('div', { class: 'cloud-row' }, email,
+        el('button', { class: 'primary-btn', type: 'button', onclick: (e) => conEspera(e.currentTarget, async () => {
+          await N.invitar(email.value);
+          toast(`✅ Invitación hecha: ${email.value.trim().toLowerCase()}`);
+          email.value = '';
+        }) }, 'Invitar')),
+      el('p', { class: 'cloud-note', text: 'Todo lo de Dilo (listas y agenda) se comparte con las personas de la casa. Las notas de voz grabadas se quedan en el móvil donde se grabaron.' }),
+      el('button', { class: 'ghost-btn', type: 'button', onclick: (e) => conEspera(e.currentTarget, () => N.salir()) }, 'Salir de la cuenta'),
+    );
+  }
+
+  $('cloudCard').addEventListener('click', () => { renderCloudDialog(); $('cloudDialog').showModal(); });
+
+  function conectarNube() {
+    const N = window.DiloNube;
+    if (!N) return;
+    let hogarActual = null;
+    N.onChange(() => {
+      const id = N.estado === 'dentro' && N.hogar ? N.hogar.id : null;
+      if (id !== hogarActual) { hogarActual = id; conectarListas(id ? N.db() : null); }
+      renderCloud();
+    });
+    N.onMiembros(renderCloud);
+    renderCloud();
+  }
+  if (window.DiloNube) conectarNube();
+  else window.addEventListener('dilonube', conectarNube, { once: true });
 
   // Atajo: abrir la app con ?voz para empezar a hablar directamente
   // Al tocar una notificación: abrir la lista donde se apuntó
