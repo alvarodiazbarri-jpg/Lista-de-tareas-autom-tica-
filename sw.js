@@ -1,5 +1,5 @@
 // Service worker: permite abrir la app sin conexión.
-const CACHE = 'dilo-v3';
+const CACHE = 'dilo-v4';
 const ASSETS = [
   './',
   'index.html',
@@ -26,7 +26,8 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    fetch(e.request)
+    // no-cache: pregunta siempre a la web si hay versión nueva antes de usar la copia del navegador
+    fetch(e.request, { cache: 'no-cache' })
       .then(async (res) => {
         if (res.ok) {
           const copy = res.clone();
