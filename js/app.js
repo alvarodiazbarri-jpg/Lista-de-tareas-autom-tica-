@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.17';
+  const VERSION = '0.17.1';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -1547,7 +1547,15 @@
         .sort((a, b) => (a.position || '').localeCompare(b.position || ''));
       if (!tareas.length) { if (conToque) toast('🎙️ No hay nada nuevo dictado a «Hey Google»'); return; }
       for (const t of tareas) {
-        handleInput(t.title.trim());
+        // «Hey Google, añade leche a la compra a Tasks» llega como «leche a la compra»: sin verbo
+        // iría a la Bandeja, así que si con «apunta» delante encaja en una lista que existe, se usa
+        let texto = t.title.trim();
+        const r = parse(texto, state.lists);
+        if (r && r.type === 'inbox') {
+          const r2 = parse('apunta ' + texto, state.lists);
+          if (r2 && r2.type === 'add' && !r2.created) texto = 'apunta ' + texto;
+        }
+        handleInput(texto);
         // En Google Tasks queda como hecha (no se borra, por si acaso)
         fetch(`${api}/${encodeURIComponent(t.id)}`, {
           method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
