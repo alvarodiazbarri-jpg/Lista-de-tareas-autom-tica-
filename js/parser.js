@@ -176,7 +176,7 @@
       for (const cand of [n, singular(n) === n ? n + 's' : singular(n)]) {
         const rest = body.slice(pre.length);
         if (rest === cand) continue;
-        if (rest.startsWith(cand + ' ')) {
+        if (rest.startsWith(cand + ' ') || rest.startsWith(cand + ',')) {
           let items = bodyOrig.slice(pre.length + cand.length).replace(/^[\s,]+/, '');
           const v = normalize(items).match(ADD_VERB_RE);
           if (v) items = items.slice(v[0].length);
