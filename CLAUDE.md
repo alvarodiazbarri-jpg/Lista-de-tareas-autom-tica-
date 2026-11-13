@@ -12,10 +12,14 @@ compartir la lista») y la pegue en el chat, y pasa lo nuevo a `PENDIENTES.md`.
 - Al guiarle por webs (GitHub, Firebase), da el nombre de cada botón **en español y en inglés**, porque
   el navegador a veces traduce. Avisa de que algunos botones quedan a la derecha o abajo y hay que desplazarse.
 - Usa sobre todo el **móvil Android** (Chrome). Para pasos largos, mejor desde el ordenador.
-- Para publicar: commit en la rama de trabajo → **pull request** → él pulsa *Merge* → GitHub Actions
-  (`.github/workflows/publicar.yml`) publica en GitHub Pages en 1-2 min. Dale siempre el enlace del PR.
-- **No añadas cambios a un PR después de dar el enlace**: a veces lo aprueba al momento y el cambio se
-  queda fuera. Si pasa, abre un PR nuevo.
+- **Publicar es automático** (lo pidió Álvaro): al terminar y probar un cambio, commit en la rama de
+  trabajo → **pull request** → **fusionarlo tú mismo** (merge) sin preguntarle → GitHub Actions
+  (`.github/workflows/publicar.yml`) publica en GitHub Pages en 1-2 min. Dile qué ha cambiado, que ya
+  está publicado y dale el enlace del PR por si quiere verlo.
+- **Excepción:** si Álvaro dice que quiere verlo antes, enséñale un ejemplo (capturas o una muestra) y
+  no publiques hasta que diga que sí.
+- Después de fusionar, la rama queda «gastada»: el siguiente cambio empieza desde `main` actualizado
+  (`git fetch origin main && git checkout -B <rama> origin/main`).
 - Tras publicar: cerrar Dilo del todo y abrirla dos veces; en **?** se ve la versión (`VERSION` en `js/app.js`).
 - **Nunca subas datos personales** (citas, nombres de la familia) al repositorio: es **público**.
   Si hace falta pasarle datos, mándale un archivo aparte.
