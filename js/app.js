@@ -3,7 +3,7 @@
 
   const { parse, findList, INBOX_NAME } = window.VoiceParser;
   const STORAGE_KEY = 'dilo.v1';
-  const VERSION = '0.17.1';
+  const VERSION = '0.17.2';
   const $ = (id) => document.getElementById(id);
   window.DILO_VERSION = VERSION;
 
@@ -1533,36 +1533,66 @@
       let token = N.tokenTasksGuardado();
       if (!token && conToque) token = await N.pedirTokenTasks();
       if (!token) { renderGtasks(); return; }
-      const api = 'https://tasks.googleapis.com/tasks/v1/lists/@default/tasks';
-      const r = await fetch(`${api}?showCompleted=false&showHidden=false&maxResults=100`, { headers: { Authorization: 'Bearer ' + token } });
-      if (r.status === 401) { N.olvidarTokenTasks(); renderGtasks(); if (conToque) toast('Vuelve a tocar para dar permiso a Dilo'); return; }
-      if (!r.ok) {
-        const txt = await r.text();
-        toast(/has not been used|is disabled|SERVICE_DISABLED/i.test(txt) ? '⚠️ Falta activar «Google Tasks API» en la consola de Google'
-          : '⚠️ No se pudo leer Google Tasks (' + r.status + ')');
+      const base = 'https://tasks.googleapis.com/tasks/v1';
+      const pide = async (url, opc = {}) => {
+        const r = await fetch(base + url, { ...opc, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' } });
+        if (r.status === 401) { const e = new Error('401'); e.caducado = true; throw e; }
+        if (!r.ok) { const e = new Error(String(r.status)); e.texto = await r.text(); throw e; }
+        return r.json();
+      };
+      let porDefecto, listasG;
+      try {
+        porDefecto = await pide('/users/@me/lists/@default');
+        listasG = (await pide('/users/@me/lists?maxResults=100')).items || [];
+      } catch (e) {
+        if (e.caducado) { N.olvidarTokenTasks(); renderGtasks(); if (conToque) toast('Vuelve a tocar para dar permiso a Dilo'); return; }
+        toast(/has not been used|is disabled|SERVICE_DISABLED/i.test(e.texto || '') ? '⚠️ Falta activar «Google Tasks API» en la consola de Google'
+          : '⚠️ No se pudo leer Google Tasks (' + e.message + ')');
         return;
       }
-      const datos = await r.json();
-      const tareas = (datos.items || []).filter((t) => t.status !== 'completed' && (t.title || '').trim())
-        .sort((a, b) => (a.position || '').localeCompare(b.position || ''));
+      // Se leen «Mis tareas» (la lista por defecto, donde guarda «Hey Google») y además cualquier
+      // lista de Google Tasks que se llame como una lista de Dilo (p. ej. «Compra»): lo de ahí va directo
+      const fuentes = [];
+      for (const lg of listasG) {
+        if (lg.id === porDefecto.id) { fuentes.push({ lg, destino: null }); continue; }
+        const d = findList(state.lists, lg.title || '');
+        if (d && d.name !== INBOX_NAME) fuentes.push({ lg, destino: d });
+      }
+      if (!fuentes.some((f) => f.lg.id === porDefecto.id)) fuentes.unshift({ lg: porDefecto, destino: null });
+      const tareas = [];
+      for (const f of fuentes) {
+        const datos = await pide(`/lists/${encodeURIComponent(f.lg.id)}/tasks?showCompleted=false&showHidden=false&maxResults=100`);
+        (datos.items || []).filter((t) => t.status !== 'completed' && (t.title || '').trim())
+          .sort((a, b) => (a.position || '').localeCompare(b.position || ''))
+          .forEach((t) => tareas.push({ t, f }));
+      }
       if (!tareas.length) { if (conToque) toast('🎙️ No hay nada nuevo dictado a «Hey Google»'); return; }
-      for (const t of tareas) {
-        // «Hey Google, añade leche a la compra a Tasks» llega como «leche a la compra»: sin verbo
-        // iría a la Bandeja, así que si con «apunta» delante encaja en una lista que existe, se usa
-        let texto = t.title.trim();
-        const r = parse(texto, state.lists);
-        if (r && r.type === 'inbox') {
-          const r2 = parse('apunta ' + texto, state.lists);
-          if (r2 && r2.type === 'add' && !r2.created) texto = 'apunta ' + texto;
+      for (const { t, f } of tareas) {
+        const titulo = t.title.trim();
+        if (f.destino) {
+          // De una lista de Google Tasks con el mismo nombre que una de Dilo: directo a esa lista
+          snapshot();
+          addItems(f.destino, [titulo.charAt(0).toUpperCase() + titulo.slice(1)]);
+          save(); render();
+        } else {
+          // «Hey Google, añade leche a la compra a Tasks» llega como «leche a la compra»: sin verbo
+          // iría a la Bandeja, así que si con «apunta» delante encaja en una lista que existe, se usa
+          let texto = titulo;
+          const r = parse(texto, state.lists);
+          if (r && r.type === 'inbox') {
+            const r2 = parse('apunta ' + texto, state.lists);
+            if (r2 && r2.type === 'add' && !r2.created) texto = 'apunta ' + texto;
+          }
+          handleInput(texto);
         }
-        handleInput(texto);
         // En Google Tasks queda como hecha (no se borra, por si acaso)
-        fetch(`${api}/${encodeURIComponent(t.id)}`, {
-          method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'completed' }),
+        pide(`/lists/${encodeURIComponent(f.lg.id)}/tasks/${encodeURIComponent(t.id)}`, {
+          method: 'PATCH', body: JSON.stringify({ status: 'completed' }),
         }).catch(() => {});
       }
-      toast(tareas.length === 1 ? `🎙️ Recogido de «Hey Google»: «${tareas[0].title.trim()}»` : `🎙️ ${tareas.length} cosas recogidas de «Hey Google»`);
+      const t0 = tareas[0];
+      const donde = (x) => (x.f.destino ? ` → ${x.f.destino.name}` : '');
+      toast(tareas.length === 1 ? `🎙️ Recogido de «Hey Google»: «${t0.t.title.trim()}»${donde(t0)}` : `🎙️ ${tareas.length} cosas recogidas de «Hey Google»`);
     } catch (e) {
       const c = e && e.code;
       if (c === 'auth/popup-blocked') toast('⚠️ El móvil bloqueó la ventana de Google. Vuelve a tocar.');
