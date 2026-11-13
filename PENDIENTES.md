@@ -52,6 +52,7 @@ mande (en la lista: ⋯ → «📋 Copiar o compartir la lista») y pasar aquí 
 - [x] Voz en Android sin frases repetidas, y la lista se entiende delante o detrás (versión 0.3).
 
 ## Ideas para más adelante
+- [ ] **Dispositivo con botón y micro ya hecho** (buscado en noviembre de 2026). El mejor candidato es el anillo **Pebble Index 01** (75 $ en reserva, 99 $ después; a Europa unos 110 $ con envío e impuestos): botón + micrófono, Bluetooth, Android, transcribe en el móvil, sin suscripción y puede mandar el texto a un **webhook** propio → se puede llevar a Google Tasks/Dilo con un Google Apps Script. Pegas: batería no recargable (unos 2 años) y plazos de envío variables. Otras: auriculares con botón del asistente (Pixel Buds A desde ~83 €, Honor Choice), Galaxy Watch8 (~269-379 €, sin confirmar que guarde en Tasks). Descartados: Amazon Bee (solo EE. UU., escucha siempre, suscripción) y Sandbar Stream (solo iPhone).
 - [ ] **Botón en la muñeca para hablar a Dilo** (sin «Hey Google»). Álvaro tiene una placa Seeed Studio XIAO (falta saber el modelo exacto). Opciones: (1) la placa como teclado Bluetooth con la tecla del asistente, para hablar al móvil; (2) pulsera con micrófono que mande la voz por Wi-Fi (zona Wi-Fi del móvil) a un Google Apps Script que la pase a texto con Groq y la guarde en Google Tasks, de donde Dilo la recoge. Otras: auriculares con botón del asistente; reloj Wear OS con Gemini.
 - [ ] Recordatorios para las tareas con fecha.
 - [ ] Ordenar automáticamente la Bandeja de entrada con ayuda de IA.
